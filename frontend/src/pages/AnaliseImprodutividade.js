@@ -158,6 +158,7 @@ export default function AnaliseImprodutividade() {
         setExpanded(isExpanded ? panel : false);
     };
 
+    // Dados para o PieChart
     const globalSectorDistributionPieData = Object.entries(processedData)
         .filter(([, details]) => details.totalPecas > 0)
         .map(([setorName, details], index) => ({
@@ -168,16 +169,23 @@ export default function AnaliseImprodutividade() {
 
     const getPieChartSeries = () => {
         return [{
-            data: globalSectorDistributionPieData.map(item => ({
-                ...item,
-                color: (expanded && expanded !== item.label) ? 'gray' : colorPalette.charts[item.id % colorPalette.charts.length]
-            })),
+            data: globalSectorDistributionPieData,
             innerRadius: 40,
             outerRadius: 100,
             paddingAngle: 2,
             cornerRadius: 5,
             arcLabel: (item) => `${(item.value / totalGeralPecasNC * 100).toFixed(1)}%`,
+            highlightScope: { faded: 'none', highlighted: 'item' },
+            faded: { innerRadius: 30, additionalRadius: -10, color: '#cccccc' }, 
         }];
+    };
+
+    const getDynamicPieColors = (currentSetorName) => {
+        return globalSectorDistributionPieData.map(item => {
+            return (expanded && expanded !== item.label)
+                ? '#cccccc'
+                : colorPalette.charts[item.id % colorPalette.charts.length]; 
+        });
     };
 
     return (
@@ -259,27 +267,6 @@ export default function AnaliseImprodutividade() {
                             </Typography>
                         </Paper>
 
-                        {totalGeralPecasNC > 0 && (
-                            <Paper elevation={3} sx={{ p: 3, mb: 4, borderRadius: '12px' }}>
-                                <Typography variant="h6" gutterBottom align="center" sx={{ fontWeight: 'bold', color: colorPalette.textPrimary }}>
-                                    Distribuição Global de Peças Não Conformes por Setor
-                                </Typography>
-                                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2, width: '100%', maxWidth: '900px', margin: 'auto' }}>
-                                    <PieChart
-                                        series={getPieChartSeries()}
-                                        height={300}
-                                        slotProps={{
-                                            legend: {
-                                                direction: 'row',
-                                                position: { vertical: 'bottom', horizontal: 'middle' },
-                                                padding: 0,
-                                            },
-                                        }}
-                                    />
-                                </Box>
-                            </Paper>
-                        )}
-
 
                         {Object.entries(processedData).sort((a, b) => b[1].totalPecas - a[1].totalPecas).map(([setorNome, details]) => {
                             const percentageOfTotalNC = totalGeralPecasNC > 0 ? (details.totalPecas / totalGeralPecasNC) * 100 : 0;
@@ -307,8 +294,9 @@ export default function AnaliseImprodutividade() {
                                                 </Typography>
                                                 <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
                                                     <PieChart
-                                                        series={getPieChartSeries()}
+                                                        series={getPieChartSeries()} 
                                                         height={300}
+                                                        colors={getDynamicPieColors(setorNome)} 
                                                         slotProps={{
                                                             legend: {
                                                                 direction: 'row',
