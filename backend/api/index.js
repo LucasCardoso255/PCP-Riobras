@@ -239,7 +239,6 @@ app.post('/api/apontamentos/injetora', authenticateToken, async (req, res) => {
     }
 });
 
-
 app.put('/api/apontamentos/injetora/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
     const user = req.user;
@@ -337,18 +336,36 @@ app.get('/api/produtos/taxa-nc', authenticateToken, async (req, res) => {
 });
 
 app.get('/api/apontamentos/injetora', async (req, res) => {
-    const { dataApontamento, turno, maquina } = req.query;
+    const { dataInicio, dataFim, peca, turno, tipoInjetora, maquina } = req.query;
+
     try {
         let query = supabase.from('apontamentos_injetora').select('*');
-        if (dataApontamento) query = query.eq('data_apontamento', dataApontamento);
-        if (turno) query = query.eq('turno', turno);
-        if (maquina) query = query.eq('maquina', maquina);
+
+        if (dataInicio) {
+            query = query.gte('data_apontamento', dataInicio);
+        }
+        if (dataFim) {
+            query = query.lte('data_apontamento', dataFim);
+        }
+        if (peca) {
+            query = query.eq('peca', peca);
+        }
+        if (turno) {
+            query = query.eq('turno', turno);
+        }
+        if (tipoInjetora) {
+            query = query.eq('tipo_injetora', tipoInjetora);
+        }
+        if (maquina) {
+            query = query.eq('maquina', maquina);
+        }
         
-        query = query.order('hora_apontamento', { ascending: true });
+        query = query.order('data_apontamento', { ascending: true }).order('hora_apontamento', { ascending: true });
 
         const { data, error } = await query;
         if (error) throw error;
         res.status(200).json(data);
+
     } catch (error) {
         res.status(500).json({ message: 'Erro ao buscar apontamentos.', details: error.message });
     }
