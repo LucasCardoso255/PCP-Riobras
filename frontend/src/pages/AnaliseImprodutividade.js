@@ -233,9 +233,9 @@ export default function AnaliseImprodutividade() {
                                             label: 'Peças Não Conformes',
                                             color: colorPalette.secondary,
                                         }]}
-                                        height={300}
+                                        height={500}
                                         xAxis={[{ scaleType: 'band', data: Object.keys(processedData) }]}
-                                        margin={{ top: 10, bottom: 30, left: 40, right: 10 }}
+                                        margin={{ top: 0, bottom: 0, left: 0, right: 0 }}
                                     />
                                 </Box>
                             ) : (
