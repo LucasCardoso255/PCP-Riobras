@@ -32,6 +32,10 @@ const ApontamentoService = {
         const response = await api.delete(`/api/apontamentos/injetora/${id}`);
         return response.data;
     },
+    deleteApontamentosInjetoraBatch: async (ids) => {
+        const response = await api.delete(`/api/apontamentos/injetora/batch`, { data: { ids } });
+        return response.data;
+    },
     createApontamentoInjetora: async (data) => {
         const response = await api.post(`/api/apontamentos/injetora`, data);
         return response.data;
