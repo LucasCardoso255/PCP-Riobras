@@ -119,7 +119,7 @@ app.post('/api/meta-producao', authenticateToken, async (req, res) => {
     const user = req.user;
     const { meta } = req.body;
 
-    if (!user || user.level !== 2) {
+    if (!user || user.level < 2) {
         return res.status(403).json({ message: 'Acesso negado.' });
     }
 
@@ -243,15 +243,15 @@ app.put('/api/apontamentos/injetora/:id', authenticateToken, async (req, res) =>
     const { id } = req.params;
     const user = req.user;
 
-    if (!user || user.level !== 2) {
+    if (!user || user.level < 2) {
         return res.status(403).json({ message: 'Acesso negado.' });
     }
 
     const {
-        quantidade_injetada, pecas_nc, observacoes, tipo_registro, finalizado
+        quantidade_injetada, pecas_nc, observacoes, tipo_registro, finalizado, hora_apontamento
     } = req.body;
 
-    const quantidade_efetiva = quantidade_injetada - pecas_nc;
+    const quantidade_efetiva = Number(quantidade_injetada) - Number(pecas_nc);
 
     try {
         const { data, error } = await supabaseAdmin
@@ -263,19 +263,46 @@ app.put('/api/apontamentos/injetora/:id', authenticateToken, async (req, res) =>
                 tipo_registro,
                 quantidade_efetiva,
                 finalizado,
+                hora_apontamento
             })
             .eq('id', id)
-            .select();
+            .select()
+            .single();
 
         if (error) throw error;
 
-        if (!data || data.length === 0) {
+        if (!data) {
             return res.status(404).json({ message: 'Apontamento não encontrado.' });
         }
 
-        res.status(200).json(data[0]);
+        res.status(200).json(data);
     } catch (error) {
         res.status(500).json({ message: 'Erro ao atualizar apontamento.', details: error.message });
+    }
+});
+
+app.delete('/api/apontamentos/injetora/batch', authenticateToken, async (req, res) => {
+    const { ids } = req.body;
+    const user = req.user;
+
+    if (!user || user.level < 2) {
+        return res.status(403).json({ message: 'Acesso negado.' });
+    }
+
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ message: 'Nenhum ID fornecido para exclusão.' });
+    }
+
+    try {
+        const { error } = await supabaseAdmin
+            .from('apontamentos_injetora')
+            .delete()
+            .in('id', ids);
+
+        if (error) throw error;
+        res.status(204).send();
+    } catch (error) {
+        res.status(500).json({ message: 'Erro ao deletar apontamentos em lote.', details: error.message });
     }
 });
 
@@ -283,7 +310,7 @@ app.delete('/api/apontamentos/injetora/:id', authenticateToken, async (req, res)
     const { id } = req.params;
     const user = req.user;
 
-    if (!user || user.level !== 2) {
+    if (!user || user.level < 2) {
         return res.status(403).json({ message: 'Acesso negado.' });
     }
 
