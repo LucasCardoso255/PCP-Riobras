@@ -1,4 +1,3 @@
-//teste
 import React, { useState, useEffect } from 'react';
 import {
     Box,
@@ -312,15 +311,6 @@ export default function AnaliseImprodutividade() {
                             const percentageOfTotalNC = totalGeralPecasNC > 0 ? (details.totalPecas / totalGeralPecasNC) * 100 : 0;
                             if (details.totalPecas === 0) return null;
 
-                            const individualChartColors = [
-                                theme.palette.primary.light,
-                                theme.palette.secondary.light,
-                                theme.palette.info.main,
-                                theme.palette.warning.main,
-                                theme.palette.success.main,
-                                theme.palette.error.main,
-                            ];
-
                             return (
                                 <Accordion
                                     key={setorName}
@@ -352,8 +342,15 @@ export default function AnaliseImprodutividade() {
                                                             outerRadius: 100,
                                                             paddingAngle: 2,
                                                             cornerRadius: 5,
-                                                            highlightScope: { faded: 'global', highlighted: 'item' },
-                                                            faded: { innerRadius: 30, additionalRadius: -10, color: theme.palette.action.disabledBackground },
+                                                            highlightScope: {
+                                                                highlighted: expanded === setorName ? 'item' : 'none',
+                                                                faded: expanded === setorName ? 'none' : 'global',
+                                                            },
+                                                            faded: {
+                                                                innerRadius: 30,
+                                                                additionalRadius: -10,
+                                                                color: theme.palette.action.disabledBackground,
+                                                            },
                                                             arcLabel: (item) => `${(item.value / totalGeralPecasNC * 100).toFixed(1)}%`,
                                                         }]}
                                                         height={300}
@@ -375,7 +372,7 @@ export default function AnaliseImprodutividade() {
                                                     Maiores Registros de Não Conformidade (Top {displayLimit})
                                                 </Typography>
                                                 <TableContainer component={Paper} variant="outlined" sx={{ backgroundColor: theme.palette.background.paper, color: theme.palette.text.primary, borderColor: theme.palette.divider }}>
-                                                    <Table size="small" aria-label={`registros de ${setorNome}`}>
+                                                    <Table size="small" aria-label={`registros de ${setorName}`}>
                                                         <TableHead>
                                                             <TableRow sx={{ backgroundColor: theme.palette.action.hover }}>
                                                                 <TableCell sx={{ color: theme.palette.text.primary }}>Data</TableCell>
