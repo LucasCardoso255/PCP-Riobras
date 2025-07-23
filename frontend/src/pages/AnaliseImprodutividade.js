@@ -1,3 +1,4 @@
+//teste
 import React, { useState, useEffect } from 'react';
 import {
     Box,
@@ -21,7 +22,7 @@ import {
     AccordionSummary,
     AccordionDetails,
     styled,
-    useTheme 
+    useTheme
 } from '@mui/material';
 import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -44,7 +45,7 @@ const StyledTableRow = styled(TableRow)(({ theme }) => ({
 }));
 
 export default function AnaliseImprodutividade() {
-    const theme = useTheme(); 
+    const theme = useTheme();
     const [improdutividadeData, setImprodutividadeData] = useState([]);
     const [processedData, setProcessedData] = useState({});
     const [totalGeralPecasNC, setTotalGeralPecasNC] = useState(0);
@@ -158,22 +159,52 @@ export default function AnaliseImprodutividade() {
             label: setorName,
         }));
 
+    const pieChartColors = [
+        theme.palette.primary.main,
+        theme.palette.secondary.main,
+        theme.palette.error.main,
+        theme.palette.warning.main,
+        theme.palette.info.main,
+        theme.palette.success.main,
+        '#FFC107',
+        '#17A2B8',
+        '#28A745',
+        '#DC3545',
+        '#6C757D',
+        '#007BFF',
+        '#6f42c1',
+        '#fd7e14',
+        '#20c997',
+        '#6610f2',
+    ];
+
     return (
         <LocalizationProvider dateAdapter={AdapterMoment} adapterLocale="pt-br">
-            <Box component="main" sx={{ flexGrow: 1, p: 3 }}> 
+            <Box component="main" sx={{ flexGrow: 1, p: 3, backgroundColor: theme.palette.background.default, minHeight: '100vh' }}>
                 <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold', color: theme.palette.text.primary }}>
                     Análise de Improdutividade por Setor
                 </Typography>
 
-                <Paper elevation={3} sx={{ p: 3, mb: 4, borderRadius: '12px' }}> 
-                    <Typography variant="h6" gutterBottom>Filtros</Typography>
+                <Paper elevation={3} sx={{ p: 3, mb: 4, borderRadius: '12px', backgroundColor: theme.palette.background.paper }}>
+                    <Typography variant="h6" gutterBottom sx={{ color: theme.palette.text.primary }}>Filtros</Typography>
                     <Grid container spacing={2} alignItems="center">
                         <Grid item xs={12} sm={6} md={3}>
                             <DatePicker
                                 label="Data Início"
                                 value={filters.startDate}
                                 onChange={(newValue) => handleFilterChange('startDate', newValue)}
-                                slotProps={{ textField: { fullWidth: true } }}
+                                slotProps={{
+                                    textField: {
+                                        fullWidth: true,
+                                        InputLabelProps: { sx: { color: theme.palette.text.secondary } },
+                                        InputProps: { sx: { color: theme.palette.text.primary } },
+                                        sx: {
+                                            '& .MuiOutlinedInput-notchedOutline': { borderColor: theme.palette.divider },
+                                            '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: theme.palette.primary.light },
+                                            '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: theme.palette.primary.main },
+                                        }
+                                    }
+                                }}
                             />
                         </Grid>
                         <Grid item xs={12} sm={6} md={3}>
@@ -181,38 +212,55 @@ export default function AnaliseImprodutividade() {
                                 label="Data Fim"
                                 value={filters.endDate}
                                 onChange={(newValue) => handleFilterChange('endDate', newValue)}
-                                slotProps={{ textField: { fullWidth: true } }}
+                                slotProps={{
+                                    textField: {
+                                        fullWidth: true,
+                                        InputLabelProps: { sx: { color: theme.palette.text.secondary } },
+                                        InputProps: { sx: { color: theme.palette.text.primary } },
+                                        sx: {
+                                            '& .MuiOutlinedInput-notchedOutline': { borderColor: theme.palette.divider },
+                                            '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: theme.palette.primary.light },
+                                            '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: theme.palette.primary.main },
+                                        }
+                                    }
+                                }}
                             />
                         </Grid>
                         <Grid item xs={12} sm={6} md={3}>
                             <FormControl fullWidth sx={{ minWidth: 120 }}>
-                                <InputLabel id="setor-filter-label">Setor</InputLabel>
+                                <InputLabel id="setor-filter-label" sx={{ color: theme.palette.text.secondary }}>Setor</InputLabel>
                                 <Select
                                     labelId="setor-filter-label"
                                     value={filters.selectedSetorId}
                                     label="Setor"
                                     onChange={(e) => handleFilterChange('selectedSetorId', e.target.value)}
+                                    sx={{
+                                        color: theme.palette.text.primary,
+                                        '& .MuiOutlinedInput-notchedOutline': { borderColor: theme.palette.divider },
+                                        '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: theme.palette.primary.light },
+                                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: theme.palette.primary.main },
+                                    }}
                                 >
-                                    <MenuItem value=""><em>Todos os Setores</em></MenuItem>
+                                    <MenuItem value="" sx={{ color: theme.palette.text.primary }}><em>Todos os Setores</em></MenuItem>
                                     {setores.map((setor) => (
-                                        <MenuItem key={setor.id} value={setor.id}>{setor.nome_setor}</MenuItem>
+                                        <MenuItem key={setor.id} value={setor.id} sx={{ color: theme.palette.text.primary }}>{setor.nome_setor}</MenuItem>
                                     ))}
                                 </Select>
                             </FormControl>
                         </Grid>
                         <Grid item xs={12} sm={6} md={3} sx={{ display: 'flex', gap: 1 }}>
-                            <Button variant="contained" onClick={handleApplyFilters} disabled={loading} fullWidth sx={{ backgroundColor: theme.palette.primary.main }}>Aplicar</Button>
-                            <Button variant="outlined" onClick={handleClearFilters} disabled={loading} fullWidth>Limpar</Button>
+                            <Button variant="contained" onClick={handleApplyFilters} disabled={loading} fullWidth sx={{ backgroundColor: theme.palette.primary.main, color: theme.palette.primary.contrastText }}>Aplicar</Button>
+                            <Button variant="outlined" onClick={handleClearFilters} disabled={loading} fullWidth sx={{ color: theme.palette.text.primary, borderColor: theme.palette.divider }}>Limpar</Button>
                         </Grid>
                     </Grid>
                 </Paper>
 
-                {loading && <Box sx={{ display: 'flex', justifyContent: 'center', my: 5 }}><CircularProgress /></Box>}
-                {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+                {loading && <Box sx={{ display: 'flex', justifyContent: 'center', my: 5 }}><CircularProgress sx={{ color: theme.palette.primary.main }} /></Box>}
+                {error && <Alert severity="error" sx={{ mb: 2, backgroundColor: theme.palette.error.dark, color: theme.palette.error.contrastText }}>{error}</Alert>}
 
                 {!loading && !error && (
                     <>
-                        <Paper elevation={3} sx={{ p: 3, mb: 4, borderRadius: '12px' }}>
+                        <Paper elevation={3} sx={{ p: 3, mb: 4, borderRadius: '12px', backgroundColor: theme.palette.background.paper }}>
                             <Typography variant="h6" gutterBottom align="center" sx={{ fontWeight: 'bold', color: theme.palette.text.primary }}>
                                 Total de Peças Não Conformes por Setor
                             </Typography>
@@ -222,38 +270,49 @@ export default function AnaliseImprodutividade() {
                                         series={[{
                                             data: Object.values(processedData).map(d => d.totalPecas),
                                             label: 'Peças Não Conformes',
-                                            color: theme.palette.error.main, 
+                                            color: theme.palette.error.main,
                                         }]}
                                         height={300}
-                                        xAxis={[{ scaleType: 'band', data: Object.keys(processedData), labelStyle: { fill: theme.palette.text.primary }, tickLabelStyle: { fill: theme.palette.text.secondary } }]}
-                                        yAxis={[{ labelStyle: { fill: theme.palette.text.primary }, tickLabelStyle: { fill: theme.palette.text.secondary } }]}
+                                        xAxis={[{
+                                            scaleType: 'band',
+                                            data: Object.keys(processedData),
+                                            labelStyle: { fill: theme.palette.text.primary },
+                                            tickLabelStyle: { fill: theme.palette.text.secondary }
+                                        }]}
+                                        yAxis={[{
+                                            labelStyle: { fill: theme.palette.text.primary },
+                                            tickLabelStyle: { fill: theme.palette.text.secondary }
+                                        }]}
                                         margin={{ top: 10, bottom: 30, left: 40, right: 10 }}
                                         sx={{
                                             '.MuiChartsAxis-line': {
-                                                stroke: theme.palette.text.secondary,
+                                                stroke: theme.palette.divider,
                                             },
                                             '.MuiChartsAxis-tick': {
-                                                stroke: theme.palette.text.secondary,
+                                                stroke: theme.palette.divider,
                                             },
                                             '.MuiChartsAxis-tickLabel': {
                                                 fill: theme.palette.text.secondary,
+                                            },
+                                            '.MuiChartsAxis-label': {
+                                                fill: theme.palette.text.primary,
                                             },
                                         }}
                                     />
                                 </Box>
                             ) : (
-                                <Alert severity="info">Nenhum registro de não conformidade encontrado para os filtros selecionados.</Alert>
+                                <Alert severity="info" sx={{ backgroundColor: theme.palette.info.dark, color: theme.palette.info.contrastText }}>Nenhum registro de não conformidade encontrado para os filtros selecionados.</Alert>
                             )}
                             <Typography variant="h6" align="center" sx={{ mt: 2, fontWeight: 'bold', color: theme.palette.text.primary }}>
                                 Total Geral: {totalGeralPecasNC}
                             </Typography>
                         </Paper>
 
-                        {Object.entries(processedData).sort((a, b) => b[1].totalPecas - a[1].totalPecas).map(([setorNome, details]) => {
+                        {Object.entries(processedData).sort((a, b) => b[1].totalPecas - a[1].totalPecas).map(([setorName, details]) => {
                             const percentageOfTotalNC = totalGeralPecasNC > 0 ? (details.totalPecas / totalGeralPecasNC) * 100 : 0;
                             if (details.totalPecas === 0) return null;
 
-                            const chartColors = [
+                            const individualChartColors = [
                                 theme.palette.primary.light,
                                 theme.palette.secondary.light,
                                 theme.palette.info.main,
@@ -264,22 +323,22 @@ export default function AnaliseImprodutividade() {
 
                             return (
                                 <Accordion
-                                    key={setorNome}
-                                    expanded={expanded === setorNome}
-                                    onChange={handleAccordionChange(setorNome)}
-                                    sx={{ mb: 2, borderRadius: '12px', '&:before': { display: 'none' } }}
+                                    key={setorName}
+                                    expanded={expanded === setorName}
+                                    onChange={handleAccordionChange(setorName)}
+                                    sx={{ mb: 2, borderRadius: '12px', '&:before': { display: 'none' }, backgroundColor: theme.palette.background.paper }}
                                     elevation={3}
                                 >
                                     <AccordionSummary
                                         expandIcon={<ExpandMoreIcon sx={{ color: theme.palette.text.secondary }} />}
                                         sx={{ '&:hover': { backgroundColor: theme.palette.action.hover }, p: '12px 24px' }}
                                     >
-                                        <Typography variant="h6" sx={{ flexGrow: 1, fontWeight: 500, color: theme.palette.text.primary }}>{setorNome}</Typography>
+                                        <Typography variant="h6" sx={{ flexGrow: 1, fontWeight: 500, color: theme.palette.text.primary }}>{setorName}</Typography>
                                         <Typography sx={{ color: theme.palette.text.secondary, alignSelf: 'center', fontWeight: 'bold' }}>
                                             {details.totalPecas} peças NC ({percentageOfTotalNC.toFixed(1)}% do total)
                                         </Typography>
                                     </AccordionSummary>
-                                    <AccordionDetails sx={{ p: 3, backgroundColor: theme.palette.background.paper }}> 
+                                    <AccordionDetails sx={{ p: 3, backgroundColor: theme.palette.background.paper }}>
                                         <Grid container spacing={4} alignItems="center">
                                             <Grid item xs={12} md={6}>
                                                 <Typography variant="subtitle1" align="center" gutterBottom sx={{ fontWeight: 'bold', color: theme.palette.text.primary }}>
@@ -294,11 +353,11 @@ export default function AnaliseImprodutividade() {
                                                             paddingAngle: 2,
                                                             cornerRadius: 5,
                                                             highlightScope: { faded: 'global', highlighted: 'item' },
-                                                            faded: { innerRadius: 30, additionalRadius: -10, color: 'gray' },
+                                                            faded: { innerRadius: 30, additionalRadius: -10, color: theme.palette.action.disabledBackground },
                                                             arcLabel: (item) => `${(item.value / totalGeralPecasNC * 100).toFixed(1)}%`,
                                                         }]}
                                                         height={300}
-                                                        colors={chartColors} 
+                                                        colors={pieChartColors}
                                                         slotProps={{
                                                             legend: {
                                                                 direction: 'row',
@@ -315,7 +374,7 @@ export default function AnaliseImprodutividade() {
                                                 <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold', color: theme.palette.text.primary }}>
                                                     Maiores Registros de Não Conformidade (Top {displayLimit})
                                                 </Typography>
-                                                <TableContainer component={Paper} variant="outlined" sx={{ backgroundColor: theme.palette.background.paper, color: theme.palette.text.primary }}>
+                                                <TableContainer component={Paper} variant="outlined" sx={{ backgroundColor: theme.palette.background.paper, color: theme.palette.text.primary, borderColor: theme.palette.divider }}>
                                                     <Table size="small" aria-label={`registros de ${setorNome}`}>
                                                         <TableHead>
                                                             <TableRow sx={{ backgroundColor: theme.palette.action.hover }}>
