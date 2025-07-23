@@ -307,6 +307,45 @@ export default function AnaliseImprodutividade() {
                             </Typography>
                         </Paper>
 
+                        {Object.keys(processedData).length > 0 && totalGeralPecasNC > 0 && (
+                            <Paper elevation={3} sx={{ p: 3, mb: 4, borderRadius: '12px', backgroundColor: theme.palette.background.paper }}>
+                                <Typography variant="h6" align="center" gutterBottom sx={{ fontWeight: 'bold', color: theme.palette.text.primary }}>
+                                    Distribuição Percentual Global
+                                </Typography>
+                                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2, width: '100%', maxWidth: '900px', margin: 'auto' }}>
+                                    <PieChart
+                                        series={[{
+                                            data: globalSectorDistributionPieData,
+                                            innerRadius: 40,
+                                            outerRadius: 100,
+                                            paddingAngle: 2,
+                                            cornerRadius: 5,
+                                            highlightScope: {
+                                                highlighted: expanded ? { dataKey: expanded } : 'none',
+                                                faded: expanded ? 'global' : 'none',
+                                            },
+                                            faded: {
+                                                innerRadius: 30,
+                                                additionalRadius: -10,
+                                                color: theme.palette.action.disabledBackground,
+                                            },
+                                            arcLabel: (item) => `${(item.value / totalGeralPecasNC * 100).toFixed(1)}%`,
+                                        }]}
+                                        height={300}
+                                        colors={pieChartColors}
+                                        slotProps={{
+                                            legend: {
+                                                direction: 'row',
+                                                position: { vertical: 'bottom', horizontal: 'middle' },
+                                                padding: 0,
+                                                labelStyle: { fill: theme.palette.text.primary },
+                                            },
+                                        }}
+                                    />
+                                </Box>
+                            </Paper>
+                        )}
+
                         {Object.entries(processedData).sort((a, b) => b[1].totalPecas - a[1].totalPecas).map(([setorName, details]) => {
                             const percentageOfTotalNC = totalGeralPecasNC > 0 ? (details.totalPecas / totalGeralPecasNC) * 100 : 0;
                             if (details.totalPecas === 0) return null;
@@ -330,44 +369,7 @@ export default function AnaliseImprodutividade() {
                                     </AccordionSummary>
                                     <AccordionDetails sx={{ p: 3, backgroundColor: theme.palette.background.paper }}>
                                         <Grid container spacing={4} alignItems="center">
-                                            <Grid item xs={12} md={6}>
-                                                <Typography variant="subtitle1" align="center" gutterBottom sx={{ fontWeight: 'bold', color: theme.palette.text.primary }}>
-                                                    Distribuição Percentual
-                                                </Typography>
-                                                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
-                                                    <PieChart
-                                                        series={[{
-                                                            data: globalSectorDistributionPieData,
-                                                            innerRadius: 40,
-                                                            outerRadius: 100,
-                                                            paddingAngle: 2,
-                                                            cornerRadius: 5,
-                                                            highlightScope: {
-                                                                highlighted: expanded === setorName ? 'item' : 'none',
-                                                                faded: expanded === setorName ? 'none' : 'global',
-                                                            },
-                                                            faded: {
-                                                                innerRadius: 30,
-                                                                additionalRadius: -10,
-                                                                color: theme.palette.action.disabledBackground,
-                                                            },
-                                                            arcLabel: (item) => `${(item.value / totalGeralPecasNC * 100).toFixed(1)}%`,
-                                                        }]}
-                                                        height={300}
-                                                        colors={pieChartColors}
-                                                        slotProps={{
-                                                            legend: {
-                                                                direction: 'row',
-                                                                position: { vertical: 'bottom', horizontal: 'middle' },
-                                                                padding: 0,
-                                                                labelStyle: { fill: theme.palette.text.primary },
-                                                            },
-                                                        }}
-                                                    />
-                                                </Box>
-                                            </Grid>
-
-                                            <Grid item xs={12} md={6}>
+                                            <Grid item xs={12} md={12}>
                                                 <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold', color: theme.palette.text.primary }}>
                                                     Maiores Registros de Não Conformidade (Top {displayLimit})
                                                 </Typography>
