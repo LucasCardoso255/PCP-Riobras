@@ -10,97 +10,95 @@ import ApontamentosManutencao from './pages/ApontamentosManutencao';
 import AnaliseImprodutividade from './pages/AnaliseImprodutividade';
 import Layout from './layout/Layout';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ThemeModeProvider } from './context/ThemeContext';
 
-import { ThemeProvider, CssBaseline, Box, CircularProgress } from '@mui/material';
-import theme from './theme';
+import { Box, CircularProgress } from '@mui/material';
 
 
 const PrivateRoute = ({ children, requiredLevel }) => {
-  const { isAuthenticated, user, loading } = useAuth();
+    const { isAuthenticated, user, loading } = useAuth();
 
-  if (loading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-        <CircularProgress />
-      </Box>
-    );
-  }
+    if (loading) {
+        return (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+                <CircularProgress />
+            </Box>
+        );
+    }
 
-  if (!isAuthenticated) {
-    return <Navigate to="/Login" />;
-  }
+    if (!isAuthenticated) {
+        return <Navigate to="/Login" />;
+    }
 
-  if (requiredLevel && user && user.level < requiredLevel) {
-    return <Navigate to="/home" replace />;
-  }
+    if (requiredLevel && user && user.level < requiredLevel) {
+        return <Navigate to="/home" replace />;
+    }
 
-  return children;
+    return children;
 };
 
 
 function App() {
-  return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <AuthProvider>
-        <Router>
-          <Routes>
-            <Route path="/Login" element={<Login />} />
+    return (
+        <ThemeModeProvider>
+            <AuthProvider>
+                <Router>
+                    <Routes>
+                        <Route path="/Login" element={<Login />} />
 
-            <Route
-              path="/"
-              element={
-                <PrivateRoute>
-                  <Layout />
-                </PrivateRoute>
-              }
-            >
+                        <Route
+                            path="/"
+                            element={
+                                <PrivateRoute>
+                                    <Layout />
+                                </PrivateRoute>
+                            }
+                        >
 
-              <Route index element={<Navigate to="/dashboard/injetora" replace />} />
+                            <Route index element={<Navigate to="/dashboard/injetora" replace />} />
 
-
-              <Route path="dashboard/injetora" element={<DashboardInjetora />} />
-              <Route
-                path="dashboard/qualidade"
-                element={
-                  <PrivateRoute requiredLevel={2}>
-                    <ProductQualityDashboard />
-                  </PrivateRoute>
-                }
-              />
-              <Route
-                path="analise/improdutividade" 
-                element={
-                  <PrivateRoute requiredLevel={2}>
-                    <AnaliseImprodutividade />
-                  </PrivateRoute>
-                }
-              />
+                            <Route path="dashboard/injetora" element={<DashboardInjetora />} />
+                            <Route
+                                path="dashboard/qualidade"
+                                element={
+                                    <PrivateRoute requiredLevel={2}>
+                                        <ProductQualityDashboard />
+                                    </PrivateRoute>
+                                }
+                            />
+                            <Route
+                                path="analise/improdutividade" 
+                                element={
+                                    <PrivateRoute requiredLevel={2}>
+                                        <AnaliseImprodutividade />
+                                    </PrivateRoute>
+                                }
+                            />
 
 
-              <Route
-                path="apontamentos/manutencao"
-                element={
-                  <PrivateRoute requiredLevel={2}>
-                    <ApontamentosManutencao />
-                  </PrivateRoute>
-                }
-              />
-              <Route path="apontamentos/injetora/inicial" element={<ApontamentosInjetoraInicial />} />
-              <Route path="apontamentos/injetora/horaria" element={<ApontamentosInjetoraHoraria />} />
+                            <Route
+                                path="apontamentos/manutencao"
+                                element={
+                                    <PrivateRoute requiredLevel={2}>
+                                        <ApontamentosManutencao />
+                                    </PrivateRoute>
+                                }
+                            />
+                            <Route path="apontamentos/injetora/inicial" element={<ApontamentosInjetoraInicial />} />
+                            <Route path="apontamentos/injetora/horaria" element={<ApontamentosInjetoraHoraria />} />
 
 
-              <Route path="home" element={<HomePage />} />
+                            <Route path="home" element={<HomePage />} />
 
 
-              <Route path="*" element={<Navigate to="/dashboard/injetora" replace />} />
-            </Route>
+                            <Route path="*" element={<Navigate to="/dashboard/injetora" replace />} />
+                        </Route>
 
-          </Routes>
-        </Router>
-      </AuthProvider>
-    </ThemeProvider>
-  );
+                    </Routes>
+                </Router>
+            </AuthProvider>
+        </ThemeModeProvider>
+    );
 }
 
 export default App;
