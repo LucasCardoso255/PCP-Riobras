@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
 import {
     Box, Toolbar, Drawer, IconButton, AppBar,
-    Typography, Button, CssBaseline, useTheme, Container 
+    Typography, Button, CssBaseline, useTheme, Container, Switch, FormControlLabel
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import Brightness4Icon from '@mui/icons-material/Brightness4';
+import Brightness7Icon from '@mui/icons-material/Brightness7';
 import { Outlet, useNavigate } from 'react-router-dom';
 import SideMenu from './SideMenu';
 import { useAuth } from '../context/AuthContext';
+import { useThemeMode } from '../context/ThemeContext';
 import { styled } from '@mui/material/styles';
 
 const drawerWidth = 240;
@@ -34,14 +37,14 @@ const Main = styled('main', { shouldForwardProp: (prop) => prop !== 'open' })(
             marginLeft: 0,
             padding: theme.spacing(2),
         },
-        backgroundColor: '#f4f6f8',
+        backgroundColor: theme.palette.background.default,
     })
 );
 
 const AppBarStyled = styled(AppBar, {
     shouldForwardProp: (prop) => prop !== 'open',
 })(({ theme, open }) => ({
-    backgroundColor: '#ffffff',
+    backgroundColor: theme.palette.background.paper,
     color: theme.palette.text.primary,
     boxShadow: 'none',
     borderBottom: `1px solid ${theme.palette.divider}`,
@@ -70,6 +73,7 @@ const DrawerHeader = styled('div')(({ theme }) => ({
 export default function Layout() {
     const navigate = useNavigate();
     const { logout, user } = useAuth();
+    const { mode, toggleThemeMode } = useThemeMode();
     const theme = useTheme();
     const [open, setOpen] = useState(true);
 
@@ -99,6 +103,20 @@ export default function Layout() {
                         Riobras Produção
                     </Typography>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <FormControlLabel
+                            control={
+                                <Switch
+                                    checked={mode === 'dark'}
+                                    onChange={toggleThemeMode}
+                                    icon={<Brightness7Icon sx={{ color: theme.palette.text.secondary }} />}
+                                    checkedIcon={<Brightness4Icon sx={{ color: theme.palette.warning.main }} />}
+                                    color="default"
+                                />
+                            }
+                            label={mode === 'dark' ? 'Dark Mode' : 'Light Mode'}
+                            sx={{ color: theme.palette.text.primary }}
+                        />
+
                         <Typography variant="body1">
                             Olá, <span style={{ fontWeight: 'bold' }}>{user?.username || 'Usuário'}</span>
                         </Typography>
@@ -116,6 +134,8 @@ export default function Layout() {
                         width: drawerWidth,
                         boxSizing: 'border-box',
                         borderRight: 'none',
+                        backgroundColor: theme.palette.background.paper,
+                        color: theme.palette.text.primary,
                     },
                 }}
                 variant="persistent"
@@ -124,7 +144,7 @@ export default function Layout() {
             >
                 <DrawerHeader>
                     <Typography variant="h6" sx={{ mr: 'auto', ml: 2, fontWeight: 'bold' }}>Menu</Typography>
-                    <IconButton onClick={handleDrawerToggle}>
+                    <IconButton onClick={handleDrawerToggle} sx={{ color: theme.palette.text.primary }}>
                         <ChevronLeftIcon />
                     </IconButton>
                 </DrawerHeader>
