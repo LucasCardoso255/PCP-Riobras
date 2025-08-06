@@ -97,7 +97,8 @@ export default function ApontamentosInjetoraHoraria() {
 
         try {
             const response = await ApontamentoService.getApontamentosInjetora({
-                dataApontamento: dataApontamento,
+                dataInicio: dataApontamento,
+                dataFim: dataApontamento,   
                 turno: turno,
                 maquina: maquina,
                 funcionario: funcionario,
@@ -220,6 +221,7 @@ export default function ApontamentosInjetoraHoraria() {
                 pecas_nc: parseFloat(editedRowData.pecas_nc) || 0,
                 observacoes: editedRowData.observacoes,
                 tipo_registro: editedRowData.tipo_registro,
+                hora_apontamento: editedRowData.hora_apontamento || editedRowData.hora 
             };
             const response = await ApontamentoService.updateApontamentoInjetora(id, dataToUpdate);
             setSuccess('Apontamento atualizado com sucesso!');
