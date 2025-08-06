@@ -44,13 +44,13 @@ export default function ProductQualityDashboard() {
     const [filterEmployeeProductIndex, setFilterEmployeeProductIndex] = useState('total');
     const [pecasList, setPecasList] = useState([]);
 
-    const [sortColumnEmployee, setSortColumnEmployee] = useState('indice'); 
-    const [sortDirectionEmployee, setSortDirectionEmployee] = useState('desc'); 
+    const [sortColumnEmployee, setSortColumnEmployee] = useState('indice');
+    const [sortDirectionEmployee, setSortDirectionEmployee] = useState('desc');
 
     const [pageProducts, setPageProducts] = useState(0);
-    const [rowsPerPageProducts, setRowsPerPageProducts] = useState(10);
-    const [sortColumnProducts, setSortColumnProducts] = useState('taxaNC'); 
-    const [sortDirectionProducts, setSortDirectionProducts] = useState('desc'); 
+    const [rowsPerPageProducts, setRowsPerPageProducts] = useState(15);
+    const [sortColumnProducts, setSortColumnProducts] = useState('taxaNC');
+    const [sortDirectionProducts, setSortDirectionProducts] = useState('desc');
 
     useEffect(() => {
         if (!authLoading) {
@@ -66,6 +66,9 @@ export default function ProductQualityDashboard() {
             try {
                 const productsResponse = await axios.get(`${API_URL}/api/produtos/taxa-nc`);
                 setProductData(productsResponse.data);
+
+                const dataListsResponse = await axios.get(`${API_URL}/api/data/lists`);
+                setPecasList(dataListsResponse.data.pecas);
 
                 const thirtyDaysAgo = new Date();
                 thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -142,18 +145,18 @@ export default function ProductQualityDashboard() {
 
                         processedEmployeeProductData.push({
                             funcionario: func,
-                            peca: 'Total', 
+                            peca: 'Total',
                             totalPecasInjetadas: totalInjetadas,
                             totalPecasNC: totalNC,
                             totalPecasEfetivas: totalEfetivas,
                             indice: totalInjetadas > 0 ? ((totalEfetivas / totalInjetadas) * 100).toFixed(2) : 0
                         });
                     } else {
-                        const productData = employeeProductMap[func]?.[filterEmployeeProductIndex];
-                        if (productData) {
+                        const productDataForFuncAndPeca = employeeProductMap[func]?.[filterEmployeeProductIndex];
+                        if (productDataForFuncAndPeca) {
                             processedEmployeeProductData.push({
-                                ...productData,
-                                indice: productData.totalPecasInjetadas > 0 ? ((productData.totalPecasEfetivas / productData.totalPecasInjetadas) * 100).toFixed(2) : 0
+                                ...productDataForFuncAndPeca,
+                                indice: productDataForFuncAndPeca.totalPecasInjetadas > 0 ? ((productDataForFuncAndPeca.totalPecasEfetivas / productDataForFuncAndPeca.totalPecasInjetadas) * 100).toFixed(2) : 0
                             });
                         } else {
                             processedEmployeeProductData.push({
@@ -168,15 +171,9 @@ export default function ProductQualityDashboard() {
                     }
                 });
 
-                const uniquePecas = [...new Set(apontamentos.map(ap => ap.peca))].filter(Boolean)
-                    .map(pecaName => ({ codigo_peca: pecaName, descricao_peca: pecaName }))
-                    .sort((a, b) => a.descricao_peca.localeCompare(b.descricao_peca));
-                setPecasList(uniquePecas);
-
                 setEmployeeProductInjectionIndex(processedEmployeeProductData);
 
             } catch (err) {
-                console.error('Erro ao buscar dados para o Dashboard de Qualidade:', err);
                 setError('Não foi possível carregar os dados. ' + (err.response?.data?.message || err.message));
             } finally {
                 setLoading(false);
@@ -186,7 +183,7 @@ export default function ProductQualityDashboard() {
         if (!authLoading && user && user.level >= 2) {
             fetchData();
         }
-    }, [user, authLoading, navigate, filterEmployeeProductIndex]); 
+    }, [user, authLoading, navigate, filterEmployeeProductIndex]);
 
     const handleFilterEmployeeProductIndexChange = (event) => {
         setFilterEmployeeProductIndex(event.target.value);
@@ -197,7 +194,7 @@ export default function ProductQualityDashboard() {
             setSortDirectionEmployee(sortDirectionEmployee === 'asc' ? 'desc' : 'asc');
         } else {
             setSortColumnEmployee(column);
-            setSortDirectionEmployee('desc'); 
+            setSortDirectionEmployee('desc');
         }
     };
 
@@ -206,7 +203,7 @@ export default function ProductQualityDashboard() {
             setSortDirectionProducts(sortDirectionProducts === 'asc' ? 'desc' : 'asc');
         } else {
             setSortColumnProducts(column);
-            setSortDirectionProducts('desc'); 
+            setSortDirectionProducts('desc');
         }
     };
 
@@ -216,14 +213,14 @@ export default function ProductQualityDashboard() {
 
     const handleChangeRowsPerPageProducts = (event) => {
         setRowsPerPageProducts(parseInt(event.target.value, 10));
-        setPageProducts(0); 
+        setPageProducts(0);
     };
 
     const sortedEmployeeProductData = useCallback(() => {
         let dataToSort = [...employeeProductInjectionIndex];
 
         if (filterEmployeeProductIndex !== 'total') {
-            dataToSort = dataToSort.filter(item => item.peca === filterEmployeeProductIndex);
+            dataToSort = dataToSort.filter(item => item.peca === filterEmployeeProductIndex || (item.peca === 'Total' && filterEmployeeProductIndex === 'total'));
         }
 
         dataToSort.sort((a, b) => {
@@ -271,9 +268,13 @@ export default function ProductQualityDashboard() {
                     valA = a.totalInjetado;
                     valB = b.totalInjetado;
                     break;
+                case 'totalPecasNC':
+                    valA = a.totalPecasNC;
+                    valB = b.totalPecasNC;
+                    break;
                 case 'taxaNC':
-                    valA = a.taxaNC;
-                    valB = b.taxaNC;
+                    valA = parseFloat(a.taxaNC);
+                    valB = parseFloat(b.taxaNC);
                     break;
                 default:
                     valA = a[sortColumnProducts];
@@ -296,7 +297,7 @@ export default function ProductQualityDashboard() {
 
     const getProductName = (pecaCodigo) => {
         const peca = pecasList.find(p => p.codigo_peca === pecaCodigo);
-        return peca ? `${peca.descricao_peca} (${peca.codigo_peca})` : pecaCodigo;
+        return peca ? peca.descricao_peca : pecaCodigo;
     };
 
     const CustomTooltip = ({ active, payload, label }) => {
@@ -383,15 +384,15 @@ export default function ProductQualityDashboard() {
                 </Grid>
 
                 <Grid item xs={12} md={6}>
-                    <Paper elevation={3} sx={{ p: 2, display: 'flex', flexDirection: 'column', height: 350 }}>
+                    <Box elevation={3} sx={{ p: 2, display: 'flex', flexDirection: 'column', height: 350, border: '1px solid #e0e0e0', borderRadius: '4px', boxShadow: '0px 2px 1px -1px rgba(0,0,0,0.2), 0px 1px 1px 0px rgba(0,0,0,0.14), 0px 1px 3px 0px rgba(0,0,0,0.12)' }}>
                         <Typography variant="h6" gutterBottom>
                             Taxa de Peças Não Conformes por Produto
                         </Typography>
-                        <TableContainer sx={{ flexGrow: 1 }}>
+                        <TableContainer sx={{ maxHeight: 250, overflowY: 'auto', mb: 1, width: '100%' }}>
                             <Table size="small" stickyHeader>
                                 <TableHead>
                                     <TableRow>
-                                        <TableCell>Produto</TableCell>
+                                        <TableCell sx={{ whiteSpace: 'normal', wordBreak: 'break-word' }}>Produto</TableCell>
                                         <TableCell align="right">
                                             <TableSortLabel
                                                 active={sortColumnProducts === 'totalInjetado'}
@@ -401,7 +402,15 @@ export default function ProductQualityDashboard() {
                                                 Total Injetado
                                             </TableSortLabel>
                                         </TableCell>
-                                        <TableCell align="right">Peças Não Conformes</TableCell>
+                                        <TableCell align="right">
+                                            <TableSortLabel
+                                                active={sortColumnProducts === 'totalPecasNC'}
+                                                direction={sortColumnProducts === 'totalPecasNC' ? sortDirectionProducts : 'asc'}
+                                                onClick={() => handleSortProducts('totalPecasNC')}
+                                            >
+                                                Peças Não Conformes
+                                            </TableSortLabel>
+                                        </TableCell>
                                         <TableCell align="right">
                                             <TableSortLabel
                                                 active={sortColumnProducts === 'taxaNC'}
@@ -421,7 +430,7 @@ export default function ProductQualityDashboard() {
                                     ) : (
                                         sortedAndPaginatedProductData().map((item, index) => (
                                             <TableRow
-                                                key={item.peca || index} 
+                                                key={item.peca || `product-${index}`}
                                                 sx={{
                                                     backgroundColor: item.taxaNC > 7 ? '#FFEBEE' : 'inherit',
                                                     '&:hover': {
@@ -442,7 +451,7 @@ export default function ProductQualityDashboard() {
                             </Table>
                         </TableContainer>
                         <TablePagination
-                            rowsPerPageOptions={[5, 10, 25]}
+                            rowsPerPageOptions={[5, 10, 15, 25]}
                             component="div"
                             count={productData.length}
                             rowsPerPage={rowsPerPageProducts}
@@ -450,9 +459,58 @@ export default function ProductQualityDashboard() {
                             onPageChange={handleChangePageProducts}
                             onRowsPerPageChange={handleChangeRowsPerPageProducts}
                             labelRowsPerPage="Linhas por página:"
-                            labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count !== -1 ? count : `mais de ${to}`}`}
+                            labelDisplayedRows={({ from, to, count }) => {
+                                const totalPages = Math.ceil(count / rowsPerPageProducts);
+                                return `Página ${pageProducts + 1} de ${totalPages || 1}`;
+                            }}
+                            sx={{
+                                flexShrink: 0,
+                                display: 'flex',
+                                justifyContent: 'flex-end',
+                                '.MuiTablePagination-toolbar': {
+                                    flexDirection: { xs: 'column', sm: 'row' },
+                                    alignItems: 'center',
+                                    paddingLeft: { xs: 0, sm: 2 },
+                                    paddingRight: { xs: 0, sm: 2 },
+                                    minHeight: 'auto',
+                                    gap: { xs: 1, sm: 0 },
+                                },
+                                '.MuiTablePagination-spacer': {
+                                    display: 'none',
+                                },
+                                '.MuiTablePagination-selectLabel': {
+                                    order: 1,
+                                    marginRight: '8px',
+                                    whiteSpace: 'nowrap',
+                                    marginBottom: { xs: '8px', sm: '0px' },
+                                    // Adicionado para centralizar verticalmente
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    height: 'auto',
+                                },
+                                '.MuiTablePagination-select': {
+                                    order: 2,
+                                    marginRight: { xs: '0px', sm: '24px' },
+                                    marginBottom: { xs: '8px', sm: '0px' },
+                                    // Adicionado para centralizar verticalmente
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    height: 'auto',
+                                },
+                                '.MuiTablePagination-actions': {
+                                    order: 4,
+                                    marginLeft: { xs: 0, sm: 2 },
+                                },
+                                '.MuiTablePagination-displayedRows': {
+                                    order: 3,
+                                    marginLeft: { xs: 0, sm: 'auto' },
+                                    marginRight: { xs: 0, sm: 1 },
+                                    whiteSpace: 'nowrap',
+                                    marginBottom: { xs: '8px', sm: '0px' },
+                                },
+                            }}
                         />
-                    </Paper>
+                    </Box>
                 </Grid>
             </Grid>
 
@@ -491,20 +549,20 @@ export default function ProductQualityDashboard() {
                                         {filterEmployeeProductIndex !== 'total' && <TableCell>Produto</TableCell>}
                                         <TableCell align="right">
                                             Total Injetado
-                                            <IconButton size="small" onClick={() => handleSortEmployee('totalInjetado')}>
-                                                {sortColumnEmployee === 'totalInjetado' && sortDirectionEmployee === 'asc' ? <ArrowUpwardIcon fontSize="small" /> : <ArrowDownwardIcon fontSize="small" />}
+                                            <IconButton size="small" onClick={() => handleSortEmployee('totalPecasInjetadas')}>
+                                                {sortColumnEmployee === 'totalPecasInjetadas' && sortDirectionEmployee === 'asc' ? <ArrowUpwardIcon fontSize="small" /> : <ArrowDownwardIcon fontSize="small" />}
                                             </IconButton>
                                         </TableCell>
                                         <TableCell align="right">
                                             Peças NC
-                                            <IconButton size="small" onClick={() => handleSortEmployee('pecasNC')}>
-                                                {sortColumnEmployee === 'pecasNC' && sortDirectionEmployee === 'asc' ? <ArrowUpwardIcon fontSize="small" /> : <ArrowDownwardIcon fontSize="small" />}
+                                            <IconButton size="small" onClick={() => handleSortEmployee('totalPecasNC')}>
+                                                {sortColumnEmployee === 'totalPecasNC' && sortDirectionEmployee === 'asc' ? <ArrowUpwardIcon fontSize="small" /> : <ArrowDownwardIcon fontSize="small" />}
                                             </IconButton>
                                         </TableCell>
                                         <TableCell align="right">
                                             Peças Efetivas
-                                            <IconButton size="small" onClick={() => handleSortEmployee('pecasEfetivas')}>
-                                                {sortColumnEmployee === 'pecasEfetivas' && sortDirectionEmployee === 'asc' ? <ArrowUpwardIcon fontSize="small" /> : <ArrowDownwardIcon fontSize="small" />}
+                                            <IconButton size="small" onClick={() => handleSortEmployee('totalPecasEfetivas')}>
+                                                {sortColumnEmployee === 'totalPecasEfetivas' && sortDirectionEmployee === 'asc' ? <ArrowUpwardIcon fontSize="small" /> : <ArrowDownwardIcon fontSize="small" />}
                                             </IconButton>
                                         </TableCell>
                                         <TableCell align="right">
@@ -522,7 +580,7 @@ export default function ProductQualityDashboard() {
                                         </TableRow>
                                     ) : (
                                         sortedEmployeeProductData().map((item, index) => (
-                                            <TableRow key={`${item.funcionario}-${item.peca || 'all'}-${index}`}>
+                                            <TableRow key={`${item.funcionario}-${item.peca || 'total'}-${index}`}>
                                                 <TableCell>{item.funcionario}</TableCell>
                                                 {filterEmployeeProductIndex !== 'total' && <TableCell>{getProductName(item.peca)}</TableCell>}
                                                 <TableCell align="right">{item.totalPecasInjetadas}</TableCell>
