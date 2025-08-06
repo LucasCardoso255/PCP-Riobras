@@ -16,7 +16,9 @@ import {
     InputLabel,
     Select,
     MenuItem,
-    IconButton
+    IconButton,
+    TableSortLabel,
+    TablePagination
 } from '@mui/material';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
@@ -28,7 +30,7 @@ import {
 } from 'recharts';
 
 const COLORS = ['#00C49F', '#FF8042'];
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 export default function ProductQualityDashboard() {
     const { user, loading: authLoading } = useAuth();
@@ -42,8 +44,13 @@ export default function ProductQualityDashboard() {
     const [filterEmployeeProductIndex, setFilterEmployeeProductIndex] = useState('total');
     const [pecasList, setPecasList] = useState([]);
 
-    const [sortColumn, setSortColumn] = useState('indice'); 
-    const [sortDirection, setSortDirection] = useState('desc'); 
+    const [sortColumnEmployee, setSortColumnEmployee] = useState('indice'); 
+    const [sortDirectionEmployee, setSortDirectionEmployee] = useState('desc'); 
+
+    const [pageProducts, setPageProducts] = useState(0);
+    const [rowsPerPageProducts, setRowsPerPageProducts] = useState(10);
+    const [sortColumnProducts, setSortColumnProducts] = useState('taxaNC'); 
+    const [sortDirectionProducts, setSortDirectionProducts] = useState('desc'); 
 
     useEffect(() => {
         if (!authLoading) {
@@ -118,9 +125,8 @@ export default function ProductQualityDashboard() {
                     }
                 });
 
-
                 let processedEmployeeProductData = [];
-                const allFuncs = [...new Set(apontamentos.map(ap => ap.funcionario))].filter(Boolean); // Filtrar valores nulos/undefined
+                const allFuncs = [...new Set(apontamentos.map(ap => ap.funcionario))].filter(Boolean);
 
                 allFuncs.forEach(func => {
                     if (filterEmployeeProductIndex === 'total') {
@@ -186,13 +192,31 @@ export default function ProductQualityDashboard() {
         setFilterEmployeeProductIndex(event.target.value);
     };
 
-    const handleSort = (column) => {
-        if (sortColumn === column) {
-            setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    const handleSortEmployee = (column) => {
+        if (sortColumnEmployee === column) {
+            setSortDirectionEmployee(sortDirectionEmployee === 'asc' ? 'desc' : 'asc');
         } else {
-            setSortColumn(column);
-            setSortDirection('desc'); 
+            setSortColumnEmployee(column);
+            setSortDirectionEmployee('desc'); 
         }
+    };
+
+    const handleSortProducts = (column) => {
+        if (sortColumnProducts === column) {
+            setSortDirectionProducts(sortDirectionProducts === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortColumnProducts(column);
+            setSortDirectionProducts('desc'); 
+        }
+    };
+
+    const handleChangePageProducts = (event, newPage) => {
+        setPageProducts(newPage);
+    };
+
+    const handleChangeRowsPerPageProducts = (event) => {
+        setRowsPerPageProducts(parseInt(event.target.value, 10));
+        setPageProducts(0); 
     };
 
     const sortedEmployeeProductData = useCallback(() => {
@@ -204,7 +228,7 @@ export default function ProductQualityDashboard() {
 
         dataToSort.sort((a, b) => {
             let valA, valB;
-            switch (sortColumn) {
+            switch (sortColumnEmployee) {
                 case 'totalInjetado':
                     valA = a.totalPecasInjetadas;
                     valB = b.totalPecasInjetadas;
@@ -222,21 +246,58 @@ export default function ProductQualityDashboard() {
                     valB = parseFloat(b.indice);
                     break;
                 default:
-                    valA = a[sortColumn];
-                    valB = b[sortColumn];
+                    valA = a[sortColumnEmployee];
+                    valB = b[sortColumnEmployee];
             }
 
             if (valA < valB) {
-                return sortDirection === 'asc' ? -1 : 1;
+                return sortDirectionEmployee === 'asc' ? -1 : 1;
             }
             if (valA > valB) {
-                return sortDirection === 'asc' ? 1 : -1;
+                return sortDirectionEmployee === 'asc' ? 1 : -1;
             }
             return 0;
         });
         return dataToSort;
-    }, [employeeProductInjectionIndex, filterEmployeeProductIndex, sortColumn, sortDirection]);
+    }, [employeeProductInjectionIndex, filterEmployeeProductIndex, sortColumnEmployee, sortDirectionEmployee]);
 
+    const sortedAndPaginatedProductData = useCallback(() => {
+        const dataToSort = [...productData];
+
+        dataToSort.sort((a, b) => {
+            let valA, valB;
+            switch (sortColumnProducts) {
+                case 'totalInjetado':
+                    valA = a.totalInjetado;
+                    valB = b.totalInjetado;
+                    break;
+                case 'taxaNC':
+                    valA = a.taxaNC;
+                    valB = b.taxaNC;
+                    break;
+                default:
+                    valA = a[sortColumnProducts];
+                    valB = b[sortColumnProducts];
+            }
+
+            if (valA < valB) {
+                return sortDirectionProducts === 'asc' ? -1 : 1;
+            }
+            if (valA > valB) {
+                return sortDirectionProducts === 'asc' ? 1 : -1;
+            }
+            return 0;
+        });
+
+        const startIndex = pageProducts * rowsPerPageProducts;
+        const endIndex = startIndex + rowsPerPageProducts;
+        return dataToSort.slice(startIndex, endIndex);
+    }, [productData, pageProducts, rowsPerPageProducts, sortColumnProducts, sortDirectionProducts]);
+
+    const getProductName = (pecaCodigo) => {
+        const peca = pecasList.find(p => p.codigo_peca === pecaCodigo);
+        return peca ? `${peca.descricao_peca} (${peca.codigo_peca})` : pecaCodigo;
+    };
 
     const CustomTooltip = ({ active, payload, label }) => {
         if (active && payload && payload.length) {
@@ -250,9 +311,9 @@ export default function ProductQualityDashboard() {
             }
             return (
                 <Paper sx={{ p: 1, backgroundColor: 'rgba(255, 255, 255, 0.9)', border: '1px solid #ccc' }}>
-                        <Typography variant="body2" sx={{ color: payload[0].color }}>{data.name}</Typography>
-                        <Typography variant="body2">Quantidade: {data.value}</Typography>
-                        <Typography variant="body2">Porcentagem: {data.percent.toFixed(2)}%</Typography>
+                    <Typography variant="body2" sx={{ color: payload[0].color }}>{data.name}</Typography>
+                    <Typography variant="body2">Quantidade: {data.value}</Typography>
+                    <Typography variant="body2">Porcentagem: {data.percent.toFixed(2)}%</Typography>
                 </Paper>
             );
         }
@@ -286,7 +347,7 @@ export default function ProductQualityDashboard() {
 
             <Grid container spacing={3}>
                 <Grid item xs={12} md={6}>
-                    <Paper elevation={3} sx={{ p: 2, display: 'flex', flexDirection: 'column', height: '100%' }}>
+                    <Paper elevation={3} sx={{ p: 2, display: 'flex', flexDirection: 'column', height: 350 }}>
                         <Typography variant="h6" gutterBottom>
                             Distribuição Geral de Produção
                         </Typography>
@@ -296,7 +357,7 @@ export default function ProductQualityDashboard() {
                             </Box>
                         ) : (
                             <Box sx={{ flexGrow: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 250 }}>
-                                <ResponsiveContainer width="100%" height={250}>
+                                <ResponsiveContainer width="100%" height="100%">
                                     <PieChart>
                                         <Pie
                                             data={pieChartData}
@@ -322,29 +383,45 @@ export default function ProductQualityDashboard() {
                 </Grid>
 
                 <Grid item xs={12} md={6}>
-                    <Paper elevation={3} sx={{ p: 2, display: 'flex', flexDirection: 'column', height: '100%' }}>
+                    <Paper elevation={3} sx={{ p: 2, display: 'flex', flexDirection: 'column', height: 350 }}>
                         <Typography variant="h6" gutterBottom>
                             Taxa de Peças Não Conformes por Produto
                         </Typography>
-                        <TableContainer>
-                            <Table size="small">
+                        <TableContainer sx={{ flexGrow: 1 }}>
+                            <Table size="small" stickyHeader>
                                 <TableHead>
                                     <TableRow>
-                                        <TableCell>Produto (Peça)</TableCell>
-                                        <TableCell align="right">Total Injetado</TableCell>
+                                        <TableCell>Produto</TableCell>
+                                        <TableCell align="right">
+                                            <TableSortLabel
+                                                active={sortColumnProducts === 'totalInjetado'}
+                                                direction={sortColumnProducts === 'totalInjetado' ? sortDirectionProducts : 'asc'}
+                                                onClick={() => handleSortProducts('totalInjetado')}
+                                            >
+                                                Total Injetado
+                                            </TableSortLabel>
+                                        </TableCell>
                                         <TableCell align="right">Peças Não Conformes</TableCell>
-                                        <TableCell align="right">Taxa de NC (%)</TableCell>
+                                        <TableCell align="right">
+                                            <TableSortLabel
+                                                active={sortColumnProducts === 'taxaNC'}
+                                                direction={sortColumnProducts === 'taxaNC' ? sortDirectionProducts : 'asc'}
+                                                onClick={() => handleSortProducts('taxaNC')}
+                                            >
+                                                Taxa de NC (%)
+                                            </TableSortLabel>
+                                        </TableCell>
                                     </TableRow>
                                 </TableHead>
                                 <TableBody>
-                                    {productData.length === 0 ? (
+                                    {sortedAndPaginatedProductData().length === 0 ? (
                                         <TableRow>
                                             <TableCell colSpan={4} align="center">Nenhum dado de produto encontrado.</TableCell>
                                         </TableRow>
                                     ) : (
-                                        productData.map((item) => (
+                                        sortedAndPaginatedProductData().map((item, index) => (
                                             <TableRow
-                                                key={item.peca}
+                                                key={item.peca || index} 
                                                 sx={{
                                                     backgroundColor: item.taxaNC > 7 ? '#FFEBEE' : 'inherit',
                                                     '&:hover': {
@@ -352,7 +429,7 @@ export default function ProductQualityDashboard() {
                                                     },
                                                 }}
                                             >
-                                                <TableCell>{item.peca}</TableCell>
+                                                <TableCell>{getProductName(item.peca)}</TableCell>
                                                 <TableCell align="right">{item.totalInjetado}</TableCell>
                                                 <TableCell align="right">{item.totalPecasNC}</TableCell>
                                                 <TableCell align="right" sx={{ color: item.taxaNC > 7 ? 'red' : 'inherit', fontWeight: item.taxaNC > 7 ? 'bold' : 'normal' }}>
@@ -364,6 +441,17 @@ export default function ProductQualityDashboard() {
                                 </TableBody>
                             </Table>
                         </TableContainer>
+                        <TablePagination
+                            rowsPerPageOptions={[5, 10, 25]}
+                            component="div"
+                            count={productData.length}
+                            rowsPerPage={rowsPerPageProducts}
+                            page={pageProducts}
+                            onPageChange={handleChangePageProducts}
+                            onRowsPerPageChange={handleChangeRowsPerPageProducts}
+                            labelRowsPerPage="Linhas por página:"
+                            labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count !== -1 ? count : `mais de ${to}`}`}
+                        />
                     </Paper>
                 </Grid>
             </Grid>
@@ -403,26 +491,26 @@ export default function ProductQualityDashboard() {
                                         {filterEmployeeProductIndex !== 'total' && <TableCell>Produto</TableCell>}
                                         <TableCell align="right">
                                             Total Injetado
-                                            <IconButton size="small" onClick={() => handleSort('totalInjetado')}>
-                                                {sortColumn === 'totalInjetado' && sortDirection === 'asc' ? <ArrowUpwardIcon fontSize="small" /> : <ArrowDownwardIcon fontSize="small" />}
+                                            <IconButton size="small" onClick={() => handleSortEmployee('totalInjetado')}>
+                                                {sortColumnEmployee === 'totalInjetado' && sortDirectionEmployee === 'asc' ? <ArrowUpwardIcon fontSize="small" /> : <ArrowDownwardIcon fontSize="small" />}
                                             </IconButton>
                                         </TableCell>
                                         <TableCell align="right">
                                             Peças NC
-                                            <IconButton size="small" onClick={() => handleSort('pecasNC')}>
-                                                {sortColumn === 'pecasNC' && sortDirection === 'asc' ? <ArrowUpwardIcon fontSize="small" /> : <ArrowDownwardIcon fontSize="small" />}
+                                            <IconButton size="small" onClick={() => handleSortEmployee('pecasNC')}>
+                                                {sortColumnEmployee === 'pecasNC' && sortDirectionEmployee === 'asc' ? <ArrowUpwardIcon fontSize="small" /> : <ArrowDownwardIcon fontSize="small" />}
                                             </IconButton>
                                         </TableCell>
                                         <TableCell align="right">
                                             Peças Efetivas
-                                            <IconButton size="small" onClick={() => handleSort('pecasEfetivas')}>
-                                                {sortColumn === 'pecasEfetivas' && sortDirection === 'asc' ? <ArrowUpwardIcon fontSize="small" /> : <ArrowDownwardIcon fontSize="small" />}
+                                            <IconButton size="small" onClick={() => handleSortEmployee('pecasEfetivas')}>
+                                                {sortColumnEmployee === 'pecasEfetivas' && sortDirectionEmployee === 'asc' ? <ArrowUpwardIcon fontSize="small" /> : <ArrowDownwardIcon fontSize="small" />}
                                             </IconButton>
                                         </TableCell>
                                         <TableCell align="right">
                                             Índice Injeção (%)
-                                            <IconButton size="small" onClick={() => handleSort('indice')}>
-                                                {sortColumn === 'indice' && sortDirection === 'asc' ? <ArrowUpwardIcon fontSize="small" /> : <ArrowDownwardIcon fontSize="small" />}
+                                            <IconButton size="small" onClick={() => handleSortEmployee('indice')}>
+                                                {sortColumnEmployee === 'indice' && sortDirectionEmployee === 'asc' ? <ArrowUpwardIcon fontSize="small" /> : <ArrowDownwardIcon fontSize="small" />}
                                             </IconButton>
                                         </TableCell>
                                     </TableRow>
@@ -436,7 +524,7 @@ export default function ProductQualityDashboard() {
                                         sortedEmployeeProductData().map((item, index) => (
                                             <TableRow key={`${item.funcionario}-${item.peca || 'all'}-${index}`}>
                                                 <TableCell>{item.funcionario}</TableCell>
-                                                {filterEmployeeProductIndex !== 'total' && <TableCell>{item.peca}</TableCell>}
+                                                {filterEmployeeProductIndex !== 'total' && <TableCell>{getProductName(item.peca)}</TableCell>}
                                                 <TableCell align="right">{item.totalPecasInjetadas}</TableCell>
                                                 <TableCell align="right">{item.totalPecasNC}</TableCell>
                                                 <TableCell align="right">{item.totalPecasEfetivas}</TableCell>
