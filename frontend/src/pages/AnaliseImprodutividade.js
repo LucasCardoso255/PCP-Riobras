@@ -21,13 +21,17 @@ import {
     AccordionSummary,
     AccordionDetails,
     styled,
-    useTheme
+    useTheme,
+    TablePagination,
+    TextField,
+    InputAdornment
 } from '@mui/material';
 import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { BarChart, PieChart } from '@mui/x-charts';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import SearchIcon from '@mui/icons-material/Search';
 import moment from 'moment';
 import 'moment/locale/pt-br';
 import axios from 'axios';
@@ -52,12 +56,16 @@ export default function AnaliseImprodutividade() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [expanded, setExpanded] = useState(false);
-    const [displayLimit] = useState(5);
     const [filters, setFilters] = useState({
         startDate: null,
         endDate: null,
-        selectedSetorId: ''
+        selectedSetorId: '',
+        orderBy: 'desc' // Novo estado para a ordenação: 'desc' (mais recente) ou 'asc' (mais antiga)
     });
+
+    const [page, setPage] = useState(0);
+    const [rowsPerPage, setRowsPerPage] = useState(10);
+    const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => {
         moment.locale('pt-br');
@@ -82,15 +90,20 @@ export default function AnaliseImprodutividade() {
                 return acc;
             }, { ...initialProcessedData });
 
+            // Aplica a ordenação por data aqui
             Object.keys(groupedData).forEach(setorNome => {
-                groupedData[setorNome].records.sort((a, b) => b.pecas_transferidas - a.pecas_transferidas);
+                groupedData[setorNome].records.sort((a, b) => {
+                    const dateA = new Date(`${a.data_improdutividade}T${a.hora_improdutividade}`);
+                    const dateB = new Date(`${b.data_improdutividade}T${b.hora_improdutividade}`);
+                    return filters.orderBy === 'desc' ? dateB - dateA : dateA - dateB;
+                });
             });
 
             const totalNC = improdutividadeData.reduce((sum, item) => sum + item.pecas_transferidas, 0);
             setProcessedData(groupedData);
             setTotalGeralPecasNC(totalNC);
         }
-    }, [improdutividadeData, setores]);
+    }, [improdutividadeData, setores, filters.orderBy]);
 
     const fetchSetores = async () => {
         try {
@@ -139,7 +152,8 @@ export default function AnaliseImprodutividade() {
         setFilters({
             startDate: null,
             endDate: null,
-            selectedSetorId: ''
+            selectedSetorId: '',
+            orderBy: 'desc'
         });
         setTimeout(() => {
             fetchImprodutividadeData();
@@ -148,6 +162,19 @@ export default function AnaliseImprodutividade() {
 
     const handleAccordionChange = (panel) => (event, isExpanded) => {
         setExpanded(isExpanded ? panel : false);
+    };
+
+    const handleChangePage = (event, newPage) => {
+        setPage(newPage);
+    };
+
+    const handleChangeRowsPerPage = (event) => {
+        setRowsPerPage(parseInt(event.target.value, 10));
+        setPage(0);
+    };
+
+    const handleSearchChange = (event) => {
+        setSearchTerm(event.target.value);
     };
 
     const globalSectorDistributionPieData = Object.entries(processedData)
@@ -176,6 +203,14 @@ export default function AnaliseImprodutividade() {
         '#20c997',
         '#6610f2',
     ];
+
+    const getFilteredRecords = (records, searchTerm) => {
+        if (!searchTerm) return records;
+        return records.filter(record =>
+            (record.causa && record.causa.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            (record.usuario_registro && record.usuario_registro.toLowerCase().includes(searchTerm.toLowerCase()))
+        );
+    };
 
     return (
         <LocalizationProvider dateAdapter={AdapterMoment} adapterLocale="pt-br">
@@ -247,6 +282,26 @@ export default function AnaliseImprodutividade() {
                                 </Select>
                             </FormControl>
                         </Grid>
+                        <Grid item xs={12} sm={6} md={3}>
+                            <FormControl fullWidth sx={{ minWidth: 120 }}>
+                                <InputLabel id="order-by-label" sx={{ color: theme.palette.text.secondary }}>Ordenar por Data</InputLabel>
+                                <Select
+                                    labelId="order-by-label"
+                                    value={filters.orderBy}
+                                    label="Ordenar por Data"
+                                    onChange={(e) => handleFilterChange('orderBy', e.target.value)}
+                                    sx={{
+                                        color: theme.palette.text.primary,
+                                        '& .MuiOutlinedInput-notchedOutline': { borderColor: theme.palette.divider },
+                                        '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: theme.palette.primary.light },
+                                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: theme.palette.primary.main },
+                                    }}
+                                >
+                                    <MenuItem value="desc" sx={{ color: theme.palette.text.primary }}>Mais Recente</MenuItem>
+                                    <MenuItem value="asc" sx={{ color: theme.palette.text.primary }}>Mais Antiga</MenuItem>
+                                </Select>
+                            </FormControl>
+                        </Grid>
                         <Grid item xs={12} sm={6} md={3} sx={{ display: 'flex', gap: 1 }}>
                             <Button variant="contained" onClick={handleApplyFilters} disabled={loading} fullWidth sx={{ backgroundColor: theme.palette.primary.main, color: theme.palette.primary.contrastText }}>Aplicar</Button>
                             <Button variant="outlined" onClick={handleClearFilters} disabled={loading} fullWidth sx={{ color: theme.palette.text.primary, borderColor: theme.palette.divider }}>Limpar</Button>
@@ -306,6 +361,8 @@ export default function AnaliseImprodutividade() {
                                 Total Geral: {totalGeralPecasNC}
                             </Typography>
                         </Paper>
+                        
+                        ---
 
                         {Object.keys(processedData).length > 0 && totalGeralPecasNC > 0 && (
                             <Paper elevation={3} sx={{ p: 3, mb: 4, borderRadius: '12px', backgroundColor: theme.palette.background.paper }}>
@@ -345,11 +402,16 @@ export default function AnaliseImprodutividade() {
                                 </Box>
                             </Paper>
                         )}
+                        
+                        ---
 
                         {Object.entries(processedData).sort((a, b) => b[1].totalPecas - a[1].totalPecas).map(([setorName, details]) => {
                             const percentageOfTotalNC = totalGeralPecasNC > 0 ? (details.totalPecas / totalGeralPecasNC) * 100 : 0;
                             if (details.totalPecas === 0) return null;
 
+                            const filteredRecords = getFilteredRecords(details.records, searchTerm);
+                            const recordsToDisplay = filteredRecords.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+                            
                             return (
                                 <Accordion
                                     key={setorName}
@@ -368,37 +430,79 @@ export default function AnaliseImprodutividade() {
                                         </Typography>
                                     </AccordionSummary>
                                     <AccordionDetails sx={{ p: 3, backgroundColor: theme.palette.background.paper }}>
-                                        <Grid container spacing={4} alignItems="center">
-                                            <Grid item xs={12} md={12}>
-                                                <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold', color: theme.palette.text.primary }}>
-                                                    Maiores Registros de Não Conformidade (Top {displayLimit})
-                                                </Typography>
-                                                <TableContainer component={Paper} variant="outlined" sx={{ backgroundColor: theme.palette.background.paper, color: theme.palette.text.primary, borderColor: theme.palette.divider }}>
-                                                    <Table size="small" aria-label={`registros de ${setorName}`}>
-                                                        <TableHead>
-                                                            <TableRow sx={{ backgroundColor: theme.palette.action.hover }}>
-                                                                <TableCell sx={{ color: theme.palette.text.primary }}>Data</TableCell>
-                                                                <TableCell sx={{ color: theme.palette.text.primary }}>Hora</TableCell>
-                                                                <TableCell align="right" sx={{ color: theme.palette.text.primary }}>Peças NC</TableCell>
-                                                                <TableCell sx={{ color: theme.palette.text.primary }}>Causa</TableCell>
-                                                                <TableCell sx={{ color: theme.palette.text.primary }}>Usuário</TableCell>
-                                                            </TableRow>
-                                                        </TableHead>
-                                                        <TableBody>
-                                                            {details.records.slice(0, displayLimit).map((rec) => (
-                                                                <StyledTableRow key={rec.id}>
-                                                                    <TableCell sx={{ color: theme.palette.text.secondary }}>{moment(rec.data_improdutividade).format('DD/MM/YYYY')}</TableCell>
-                                                                    <TableCell sx={{ color: theme.palette.text.secondary }}>{rec.hora_improdutividade}</TableCell>
-                                                                    <TableCell align="right" sx={{ color: theme.palette.text.secondary }}>{rec.pecas_transferidas}</TableCell>
-                                                                    <TableCell sx={{ color: theme.palette.text.secondary }}>{rec.causa || 'N/A'}</TableCell>
-                                                                    <TableCell sx={{ color: theme.palette.text.secondary }}>{rec.usuario_registro}</TableCell>
-                                                                </StyledTableRow>
-                                                            ))}
-                                                        </TableBody>
-                                                    </Table>
-                                                </TableContainer>
-                                            </Grid>
-                                        </Grid>
+                                        <Box sx={{ mb: 2 }}>
+                                            <TextField
+                                                fullWidth
+                                                label="Filtrar por Causa ou Usuário"
+                                                variant="outlined"
+                                                value={searchTerm}
+                                                onChange={handleSearchChange}
+                                                InputProps={{
+                                                    startAdornment: (
+                                                        <InputAdornment position="start">
+                                                            <SearchIcon sx={{ color: theme.palette.text.secondary }} />
+                                                        </InputAdornment>
+                                                    ),
+                                                }}
+                                                sx={{
+                                                    '& .MuiOutlinedInput-notchedOutline': { borderColor: theme.palette.divider },
+                                                    '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: theme.palette.primary.light },
+                                                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: theme.palette.primary.main },
+                                                    '& .MuiInputBase-input': { color: theme.palette.text.primary },
+                                                    '& .MuiInputLabel-root': { color: theme.palette.text.secondary },
+                                                }}
+                                            />
+                                        </Box>
+                                        
+                                        <TableContainer component={Paper} variant="outlined" sx={{ backgroundColor: theme.palette.background.paper, color: theme.palette.text.primary, borderColor: theme.palette.divider }}>
+                                            <Table size="small" aria-label={`registros de ${setorName}`}>
+                                                <TableHead>
+                                                    <TableRow sx={{ backgroundColor: theme.palette.action.hover }}>
+                                                        <TableCell sx={{ color: theme.palette.text.primary }}>Data</TableCell>
+                                                        <TableCell sx={{ color: theme.palette.text.primary }}>Hora</TableCell>
+                                                        <TableCell align="right" sx={{ color: theme.palette.text.primary }}>Peças NC</TableCell>
+                                                        <TableCell sx={{ color: theme.palette.text.primary }}>Causa</TableCell>
+                                                        <TableCell sx={{ color: theme.palette.text.primary }}>Usuário</TableCell>
+                                                    </TableRow>
+                                                </TableHead>
+                                                <TableBody>
+                                                    {recordsToDisplay.length > 0 ? (
+                                                        recordsToDisplay.map((rec) => (
+                                                            <StyledTableRow key={rec.id}>
+                                                                <TableCell sx={{ color: theme.palette.text.secondary }}>{moment(rec.data_improdutividade).format('DD/MM/YYYY')}</TableCell>
+                                                                <TableCell sx={{ color: theme.palette.text.secondary }}>{rec.hora_improdutividade}</TableCell>
+                                                                <TableCell align="right" sx={{ color: theme.palette.text.secondary }}>{rec.pecas_transferidas}</TableCell>
+                                                                <TableCell sx={{ color: theme.palette.text.secondary }}>{rec.causa || 'N/A'}</TableCell>
+                                                                <TableCell sx={{ color: theme.palette.text.secondary }}>{rec.usuario_registro}</TableCell>
+                                                            </StyledTableRow>
+                                                        ))
+                                                    ) : (
+                                                        <TableRow>
+                                                            <TableCell colSpan={5} align="center" sx={{ color: theme.palette.text.secondary }}>Nenhum registro encontrado com o filtro.</TableCell>
+                                                        </TableRow>
+                                                    )}
+                                                </TableBody>
+                                            </Table>
+                                        </TableContainer>
+                                        
+                                        <TablePagination
+                                            rowsPerPageOptions={[5, 10, 25]}
+                                            component="div"
+                                            count={filteredRecords.length}
+                                            rowsPerPage={rowsPerPage}
+                                            page={page}
+                                            onPageChange={handleChangePage}
+                                            onRowsPerPageChange={handleChangeRowsPerPage}
+                                            labelRowsPerPage="Registros por página:"
+                                            labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count}`}
+                                            sx={{
+                                                color: theme.palette.text.secondary,
+                                                '.MuiTablePagination-selectLabel': { color: theme.palette.text.secondary },
+                                                '.MuiTablePagination-select': { color: theme.palette.text.primary },
+                                                '.MuiTablePagination-displayedRows': { color: theme.palette.text.secondary },
+                                                '.MuiIconButton-root': { color: theme.palette.text.secondary }
+                                            }}
+                                        />
                                     </AccordionDetails>
                                 </Accordion>
                             );

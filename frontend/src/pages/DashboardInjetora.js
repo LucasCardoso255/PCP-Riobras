@@ -12,7 +12,8 @@ import {
     Alert,
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Collapse, IconButton,
     Autocomplete,
-    Divider
+    Divider,
+    TablePagination,
 } from '@mui/material';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
@@ -107,6 +108,8 @@ export default function DashboardInjetora() {
     const [apontamentos, setApontamentos] = useState([]);
     const [dailyProductionData, setDailyProductionData] = useState([]);
     const [aggregatedData, setAggregatedData] = useState([]);
+    const [page, setPage] = useState(0);
+    const [rowsPerPage, setRowsPerPage] = useState(10);
 
     const [startDate, setStartDate] = useState(moment().subtract(7, 'days'));
     const [endDate, setEndDate] = useState(moment());
@@ -124,86 +127,9 @@ export default function DashboardInjetora() {
 
     const canEditMeta = user?.level === 2;
 
-    const processApontamentosForDashboard = useCallback((data, currentMeta) => {
-        const dailyAggregates = {};
-        const tableAggregates = {};
+    // A função de processamento foi removida. O backend agora faz essa lógica.
 
-        data.forEach(ap => {
-            const dateKey = moment(ap.data_apontamento).format('YYYY-MM-DD');
-
-            if (!dailyAggregates[dateKey]) {
-                dailyAggregates[dateKey] = {
-                    date: dateKey,
-                    quantidadeInjetada: 0,
-                    pecasNC: 0,
-                    quantidadeEfetiva: 0,
-                    meta: Number(currentMeta)
-                };
-            }
-
-            dailyAggregates[dateKey].quantidadeInjetada += Number(ap.quantidade_injetada || 0);
-            dailyAggregates[dateKey].pecasNC += Number(ap.pecas_nc || 0);
-            dailyAggregates[dateKey].quantidadeEfetiva += Number(ap.quantidade_efetiva || 0);
-
-            const tableGroupKey = `${ap.peca}_${dateKey}_${ap.turno}_${ap.funcionario}_${ap.maquina}`;
-
-            if (!tableAggregates[tableGroupKey]) {
-                tableAggregates[tableGroupKey] = {
-                    id: tableGroupKey,
-                    peca: ap.peca,
-                    data: dateKey,
-                    turno: ap.turno,
-                    funcionario: ap.funcionario,
-                    maquina: ap.maquina,
-                    totalEfetiva: 0,
-                    totalNC: 0,
-                    details: []
-                };
-            }
-            tableAggregates[tableGroupKey].totalEfetiva += Number(ap.quantidade_efetiva || 0);
-            tableAggregates[tableGroupKey].totalNC += Number(ap.pecas_nc || 0);
-            tableAggregates[tableGroupKey].details.push(ap);
-        });
-
-        const sortedDailyData = Object.values(dailyAggregates).sort((a, b) => moment(a.date).diff(moment(b.date)));
-        setDailyProductionData(sortedDailyData);
-
-        const sortedTableData = Object.values(tableAggregates).sort((a, b) => {
-            const dateComparison = moment(a.data).diff(moment(b.data));
-            if (dateComparison !== 0) return dateComparison;
-            let comparison = a.peca.localeCompare(b.peca);
-            if (comparison !== 0) return comparison;
-            comparison = a.turno.localeCompare(b.turno);
-            if (comparison !== 0) return comparison;
-            comparison = a.funcionario.localeCompare(b.funcionario);
-            if (comparison !== 0) return comparison;
-            return a.maquina.localeCompare(b.maquina);
-        });
-
-        sortedTableData.forEach(group => {
-            group.details.sort((a, b) => {
-                const timeA = moment(a.hora_apontamento, 'HH:mm');
-                const timeB = moment(b.hora_apontamento, 'HH:mm');
-
-                let effectiveTimeA = timeA;
-                let effectiveTimeB = timeB;
-
-                if (group.turno === 'Noite') {
-                    if (timeA.hour() >= 0 && timeA.hour() < 7) {
-                        effectiveTimeA = moment(a.hora_apontamento, 'HH:mm').add(24, 'hours');
-                    }
-                    if (timeB.hour() >= 0 && timeB.hour() < 7) {
-                        effectiveTimeB = moment(b.hora_apontamento, 'HH:mm').add(24, 'hours');
-                    }
-                }
-                return effectiveTimeA.diff(effectiveTimeB);
-            });
-        });
-
-        setAggregatedData(sortedTableData);
-    }, []);
-
-    const fetchAndProcessApontamentos = useCallback(async (currentMetaValue) => {
+    const fetchDashboardData = useCallback(async (currentMetaValue) => {
         setError('');
         setLoadingFilters(true);
         try {
@@ -213,23 +139,28 @@ export default function DashboardInjetora() {
                 peca: selectedPeca ? selectedPeca.codigo_peca : null,
                 tipoInjetora: selectedTipoInjetora === 'todos' ? null : selectedTipoInjetora,
                 turno: selectedTurno === 'todos' ? null : selectedTurno,
+                meta: currentMetaValue // Envia a meta de produção para o backend
             };
             const response = await axios.get(`${REACT_APP_API_URL}/api/apontamentos/injetora`, { params });
-            setApontamentos(response.data);
-            processApontamentosForDashboard(response.data, currentMetaValue);
+            
+            // Atribui os dados diretamente, já que o backend os enviou processados
+            setApontamentos(response.data.apontamentos);
+            setDailyProductionData(response.data.dailyProductionData);
+            setAggregatedData(response.data.aggregatedData);
+
         } catch (err) {
-            console.error('Erro ao buscar apontamentos filtrados:', err);
+            console.error('Erro ao buscar dados do dashboard:', err);
             setError('Erro ao buscar dados para o relatório.');
         } finally {
             setLoadingFilters(false);
         }
-    }, [startDate, endDate, selectedPeca, selectedTipoInjetora, selectedTurno, processApontamentosForDashboard]);
+    }, [startDate, endDate, selectedPeca, selectedTipoInjetora, selectedTurno]);
 
     useEffect(() => {
         if (!loadingFilters && metaProducao !== 0) {
-            fetchAndProcessApontamentos(metaProducao);
+            fetchDashboardData(metaProducao);
         }
-    }, [startDate, endDate, selectedPeca, selectedTipoInjetora, selectedTurno, metaProducao, fetchAndProcessApontamentos]);
+    }, [startDate, endDate, selectedPeca, selectedTipoInjetora, selectedTurno, metaProducao, fetchDashboardData]);
 
     useEffect(() => {
         const loadInitialData = async () => {
@@ -245,6 +176,9 @@ export default function DashboardInjetora() {
                 setMetaProducao(initialMeta);
                 setNewMetaValue(initialMeta);
 
+                // Chama a função para buscar os dados do dashboard após carregar a meta
+                fetchDashboardData(initialMeta);
+
             } catch (err) {
                 console.error('Erro ao carregar dados iniciais:', err);
                 setError('Erro ao carregar opções de filtro ou meta de produção. Tente novamente.');
@@ -253,33 +187,7 @@ export default function DashboardInjetora() {
             }
         };
         loadInitialData();
-    }, []);
-
-    useEffect(() => {
-        const fetchApontamentos = async () => {
-            if (loadingFilters || metaProducao === 0) {
-                return;
-            }
-
-            setError('');
-            try {
-                const params = {
-                    dataInicio: startDate ? startDate.format('YYYY-MM-DD') : '',
-                    dataFim: endDate ? endDate.format('YYYY-MM-DD') : '',
-                    peca: selectedPeca ? selectedPeca.codigo_peca : null,
-                    tipoInjetora: selectedTipoInjetora === 'todos' ? null : selectedTipoInjetora,
-                    turno: selectedTurno === 'todos' ? null : selectedTurno,
-                };
-                const response = await axios.get(`${REACT_APP_API_URL}/api/apontamentos/injetora`, { params });
-                setApontamentos(response.data);
-                processApontamentosForDashboard(response.data, metaProducao);
-            } catch (err) {
-                console.error('Erro ao buscar apontamentos filtrados:', err);
-                setError('Erro ao buscar dados para o relatório.');
-            }
-        };
-        fetchApontamentos();
-    }, [startDate, endDate, selectedPeca, selectedTipoInjetora, selectedTurno, metaProducao, loadingFilters, processApontamentosForDashboard]);
+    }, [fetchDashboardData]);
 
     const handlePecaChange = (event, newValue) => {
         setSelectedPeca(newValue);
@@ -304,7 +212,8 @@ export default function DashboardInjetora() {
             if (response.status === 200) {
                 setMetaProducao(newMetaValue);
                 setEditMetaMode(false);
-                processApontamentosForDashboard(apontamentos, newMetaValue);
+                // Chama a busca de dados novamente com a nova meta
+                fetchDashboardData(newMetaValue);
             }
         } catch (err) {
             console.error('Erro ao salvar nova meta:', err);
@@ -316,6 +225,15 @@ export default function DashboardInjetora() {
     const handleCancelEditMeta = () => {
         setNewMetaValue(metaProducao);
         setEditMetaMode(false);
+    };
+
+    const handleChangePage = (event, newPage) => {
+        setPage(newPage);
+    };
+
+    const handleChangeRowsPerPage = (event) => {
+        setRowsPerPage(parseInt(event.target.value, 10));
+        setPage(0);
     };
 
     return (
@@ -330,7 +248,7 @@ export default function DashboardInjetora() {
                         Filtros
                     </Typography>
                     <Box display={'flex'} gap={2} flexDirection={'column'}>
-                        <Box >
+                        <Box>
                             <Autocomplete
                                 id="peca-autocomplete-dashboard"
                                 options={pecasList}
@@ -353,7 +271,7 @@ export default function DashboardInjetora() {
                             />
                         </Box>
                         <Box display="flex" gap={2}>
-                            <Box >
+                            <Box>
                                 <DatePicker
                                     label="Data Início"
                                     sx={{ maxWidth: 150 }}
@@ -363,7 +281,7 @@ export default function DashboardInjetora() {
                                     format="DD/MM/YYYY"
                                 />
                             </Box>
-                            <Box >
+                            <Box>
                                 <DatePicker
                                     label="Data Fim"
                                     sx={{ maxWidth: 150 }}
@@ -374,7 +292,7 @@ export default function DashboardInjetora() {
                                 />
                             </Box>
                             <Divider orientation="vertical" flexItem />
-                            <Box >
+                            <Box>
                                 <FormControl>
                                     <InputLabel id="tipo-injetora-select-label">Tipo Injetora</InputLabel>
                                     <Select
@@ -401,7 +319,7 @@ export default function DashboardInjetora() {
                                     </Select>
                                 </FormControl>
                             </Box>
-                            <Box >
+                            <Box>
                                 <FormControl>
                                     <InputLabel id="turno-select-label">Turno</InputLabel>
                                     <Select
@@ -430,7 +348,7 @@ export default function DashboardInjetora() {
                             </Box>
                             <Divider orientation="vertical" flexItem />
                             <Box xs={12} sm={3} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <TextField  
+                                <TextField
                                     sx={{ backgroundColor: '#f1f1f1', maxWidth: 200 }}
                                     label="Meta de Produção Diária"
                                     type="number"
@@ -487,9 +405,9 @@ export default function DashboardInjetora() {
                                         <YAxis />
                                         <Tooltip />
                                         <Legend />
-                                        <Line type="monotone" dataKey="quantidadeEfetiva" stroke="#8884d8" name="Quantidade Efetiva Injetada" />
-                                        <Line type="monotone" dataKey="meta" stroke="#82ca9d" name="Meta de Produção" />
-                                        <Line type="monotone" dataKey="pecasNC" stroke="#ff0000" name="Peças Não Conformes" />
+                                        <Line type="monotone" dataKey="quantidadeEfetiva" stroke="#8884d8" name="Quantidade Efetiva Injetada" isAnimationActive={false} />
+                                        <Line type="monotone" dataKey="meta" stroke="#82ca9d" name="Meta de Produção" isAnimationActive={false} />
+                                        <Line type="monotone" dataKey="pecasNC" stroke="#ff0000" name="Peças Não Conformes" isAnimationActive={false} />
                                     </LineChart>
                                 </ResponsiveContainer>
                             )}
@@ -521,11 +439,23 @@ export default function DashboardInjetora() {
                                     </TableRow>
                                 </TableHead>
                                 <TableBody>
-                                    {aggregatedData.map((row) => (
-                                        <Row key={row.id} row={row} />
-                                    ))}
+                                    {aggregatedData
+                                        .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                                        .map((row) => (
+                                            <Row key={row.id} row={row} />
+                                        ))}
                                 </TableBody>
                             </Table>
+                            <TablePagination
+                                component="div"
+                                count={aggregatedData.length}
+                                page={page}
+                                onPageChange={handleChangePage}
+                                rowsPerPage={rowsPerPage}
+                                onRowsPerPageChange={handleChangeRowsPerPage}
+                                labelRowsPerPage="Linhas por página:"
+                                labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count}`}
+                            />
                         </TableContainer>
                     )}
                 </Paper>

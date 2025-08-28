@@ -364,6 +364,7 @@ app.get('/api/produtos/taxa-nc', authenticateToken, async (req, res) => {
 
 app.get('/api/apontamentos/injetora', async (req, res) => {
     const { dataInicio, dataFim, peca, turno, tipoInjetora, maquina } = req.query;
+    const meta = Number(req.query.meta);
 
     try {
         let query = supabase.from('apontamentos_injetora').select('*');
@@ -387,14 +388,95 @@ app.get('/api/apontamentos/injetora', async (req, res) => {
             query = query.eq('maquina', maquina);
         }
         
-        query = query.order('data_apontamento', { ascending: true }).order('hora_apontamento', { ascending: true });
-
-        const { data, error } = await query;
+        const { data, error } = await query.order('data_apontamento', { ascending: true }).order('hora_apontamento', { ascending: true });
         if (error) throw error;
-        res.status(200).json(data);
+
+        const dailyAggregates = {};
+        const tableAggregates = {};
+
+        data.forEach(ap => {
+            const dateKey = ap.data_apontamento;
+
+            if (!dailyAggregates[dateKey]) {
+                dailyAggregates[dateKey] = {
+                    date: dateKey,
+                    quantidadeInjetada: 0,
+                    pecasNC: 0,
+                    quantidadeEfetiva: 0,
+                    meta: meta
+                };
+            }
+
+            dailyAggregates[dateKey].quantidadeInjetada += Number(ap.quantidade_injetada || 0);
+            dailyAggregates[dateKey].pecasNC += Number(ap.pecas_nc || 0);
+            dailyAggregates[dateKey].quantidadeEfetiva += Number(ap.quantidade_efetiva || 0);
+
+            const tableGroupKey = `${ap.peca}_${dateKey}_${ap.turno}_${ap.funcionario}_${ap.maquina}`;
+
+            if (!tableAggregates[tableGroupKey]) {
+                tableAggregates[tableGroupKey] = {
+                    id: tableGroupKey,
+                    peca: ap.peca,
+                    data: dateKey,
+                    turno: ap.turno,
+                    funcionario: ap.funcionario,
+                    maquina: ap.maquina,
+                    totalEfetiva: 0,
+                    totalNC: 0,
+                    details: []
+                };
+            }
+            tableAggregates[tableGroupKey].totalEfetiva += Number(ap.quantidade_efetiva || 0);
+            tableAggregates[tableGroupKey].totalNC += Number(ap.pecas_nc || 0);
+            tableAggregates[tableGroupKey].details.push(ap);
+        });
+
+        const sortedDailyData = Object.values(dailyAggregates).sort((a, b) => new Date(a.date) - new Date(b.date));
+        
+        const sortedTableData = Object.values(tableAggregates).sort((a, b) => {
+            const dateComparison = new Date(a.data) - new Date(b.data);
+            if (dateComparison !== 0) return dateComparison;
+            let comparison = a.peca.localeCompare(b.peca);
+            if (comparison !== 0) return comparison;
+            comparison = a.turno.localeCompare(b.turno);
+            if (comparison !== 0) return comparison;
+            comparison = a.funcionario.localeCompare(b.funcionario);
+            if (comparison !== 0) return comparison;
+            return a.maquina.localeCompare(b.maquina);
+        });
+        
+        sortedTableData.forEach(group => {
+            group.details.sort((a, b) => {
+                // Função para converter HH:mm para minutos totais para comparação
+                const timeToMinutes = (timeStr) => {
+                    const [hours, minutes] = timeStr.split(':').map(Number);
+                    return hours * 60 + minutes;
+                };
+
+                let effectiveTimeA = timeToMinutes(a.hora_apontamento);
+                let effectiveTimeB = timeToMinutes(b.hora_apontamento);
+
+                // Ajuste para turnos da noite que cruzam a meia-noite
+                if (group.turno === 'Noite') {
+                    if (effectiveTimeA >= 0 && effectiveTimeA < (7 * 60)) { // entre 00:00 e 07:00
+                        effectiveTimeA += 24 * 60;
+                    }
+                    if (effectiveTimeB >= 0 && effectiveTimeB < (7 * 60)) {
+                        effectiveTimeB += 24 * 60;
+                    }
+                }
+                return effectiveTimeA - effectiveTimeB;
+            });
+        });
+
+        res.status(200).json({
+            apontamentos: data,
+            dailyProductionData: sortedDailyData,
+            aggregatedData: sortedTableData
+        });
 
     } catch (error) {
-        res.status(500).json({ message: 'Erro ao buscar apontamentos.', details: error.message });
+        res.status(500).json({ message: 'Erro ao buscar e processar apontamentos.', details: error.message });
     }
 });
 
