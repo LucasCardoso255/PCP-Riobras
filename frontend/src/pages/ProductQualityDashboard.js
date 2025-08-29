@@ -82,7 +82,10 @@ export default function ProductQualityDashboard() {
                 };
 
                 const apontamentosResponse = await axios.get(`${API_URL}/api/apontamentos/injetora`, { params });
-                const apontamentos = apontamentosResponse.data;
+                const apontamentos = Array.isArray(apontamentosResponse.data) 
+                    ? apontamentosResponse.data 
+                    : apontamentosResponse.data?.apontamentos || [];
+
 
                 const produtosAgregados = apontamentos.reduce((acc, apontamento) => {
                     const { peca, quantidade_injetada, pecas_nc } = apontamento;
