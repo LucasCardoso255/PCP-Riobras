@@ -98,14 +98,14 @@ export default function ApontamentosInjetoraHoraria() {
         try {
             const response = await ApontamentoService.getApontamentosInjetora({
                 dataInicio: dataApontamento,
-                dataFim: dataApontamento,   
+                dataFim: dataApontamento,
                 turno: turno,
                 maquina: maquina,
                 funcionario: funcionario,
                 peca: peca,
             });
 
-            const existingApontamentos = response;
+            const existingApontamentos = response.apontamentos;
             const updatedEntries = entries.map(entry => {
                 const existing = existingApontamentos.find(
                     ap => moment(ap.hora_apontamento, 'HH:mm:ss').format('HH:mm') === entry.hora
@@ -221,7 +221,7 @@ export default function ApontamentosInjetoraHoraria() {
                 pecas_nc: parseFloat(editedRowData.pecas_nc) || 0,
                 observacoes: editedRowData.observacoes,
                 tipo_registro: editedRowData.tipo_registro,
-                hora_apontamento: editedRowData.hora_apontamento || editedRowData.hora 
+                hora_apontamento: editedRowData.hora_apontamento || editedRowData.hora
             };
             const response = await ApontamentoService.updateApontamentoInjetora(id, dataToUpdate);
             setSuccess('Apontamento atualizado com sucesso!');
@@ -264,7 +264,7 @@ export default function ApontamentosInjetoraHoraria() {
         currentEntry.pecas_nc = 0;
         currentEntry.observacoes = `Operação de ${type.toUpperCase()}`;
         currentEntry.tipo_registro = type;
-        
+
         setApontamentosHorarios(newApontamentos);
         handleRegisterHour(index);
         handleCloseMenu();
