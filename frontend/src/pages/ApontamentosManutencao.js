@@ -53,27 +53,30 @@ export default function ApontamentosManutencao() {
             if (startDate) params.dataInicio = format(startDate, 'yyyy-MM-dd');
             if (endDate) params.dataFim = format(endDate, 'yyyy-MM-dd');
             
-            const data = await ApontamentoService.getApontamentosInjetora(params);
+            const response = await ApontamentoService.getApontamentosInjetora(params);
             
-            const groupedData = data.reduce((acc, current) => {
+            const lista = response.apontamentos || [];
+
+            const groupedData = lista.reduce((acc, current) => {
                 const groupKey = `${current.data_apontamento}-${current.funcionario}-${current.maquina}-${current.peca}`;
                 if (!acc[groupKey]) {
                     acc[groupKey] = {
-                        key: groupKey,
-                        data_apontamento: current.data_apontamento,
-                        funcionario: current.funcionario,
-                        maquina: current.maquina,
-                        peca: current.peca,
-                        total_quantidade_injetada: 0,
-                        total_pecas_nc: 0,
-                        apontamentos: []
+                    key: groupKey,
+                    data_apontamento: current.data_apontamento,
+                    funcionario: current.funcionario,
+                    maquina: current.maquina,
+                    peca: current.peca,
+                    total_quantidade_injetada: 0,
+                    total_pecas_nc: 0,
+                    apontamentos: []
                     };
                 }
-                acc[groupKey].total_quantidade_injetada += current.quantidade_injetada || 0;
-                acc[groupKey].total_pecas_nc += current.pecas_nc || 0;
-                acc[groupKey].apontamentos.push(current);
-                return acc;
-            }, {});
+        acc[groupKey].total_quantidade_injetada += current.quantidade_injetada || 0;
+        acc[groupKey].total_pecas_nc += current.pecas_nc || 0;
+        acc[groupKey].apontamentos.push(current);
+        return acc;
+    }, {});
+
 
             setApontamentosAgrupados(Object.values(groupedData).sort((a, b) => new Date(b.data_apontamento) - new Date(a.data_apontamento)));
             setPage(0); 
