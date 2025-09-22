@@ -36,7 +36,7 @@ Em breve disponibilizarei uma versão de homologação à fins de testes da apli
 Contribuições são bem-vindas! Sinta-se à vontade para abrir issues e pull requests para melhorias, correções de bugs ou novas funcionalidades.
 (Com exceção do Luiz. Ele não pode)
 
-## 📧 Contato
+## Contato
 
 Para dúvidas ou sugestões, entre em contato:
 
