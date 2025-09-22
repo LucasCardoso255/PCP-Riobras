@@ -18,7 +18,7 @@ Desenvolvido com React (MUI) para o frontend e Node.js para o backend (API).
 
 **Frontend:**
 * **React.js:** Biblioteca JavaScript para construção de interfaces de usuário.
-* **Material-UI (MUI):** Biblioteca de componentes React que implementa o Material Design do Google, garantindo um design responsivo e moderno.
+* **Material-UI (MUI):** Biblioteca de componentes React que implementa o Material Design do Google.
 * **Axios:** Cliente HTTP para fazer requisições a APIs.
 * **Recharts:** Biblioteca de gráficos baseada em React para visualização de dados.
 * **React Router DOM:** Para navegação entre as páginas da aplicação.
