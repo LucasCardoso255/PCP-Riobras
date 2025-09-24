@@ -107,7 +107,7 @@ export default function ApontamentosInjetoraInicial() {
                                     }}
                                 >
                                     <MenuItem value=""><em>Selecione</em></MenuItem>
-                                    <MenuItem value="200">200T</MenuItem>
+                                    <MenuItem value="100">100T</MenuItem>
                                     <MenuItem value="250">250T</MenuItem>
                                     <MenuItem value="300">300T</MenuItem>
                                     <MenuItem value="450">450T</MenuItem>
